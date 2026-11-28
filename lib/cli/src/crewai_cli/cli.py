@@ -1461,7 +1461,13 @@ def traces_enable() -> None:
 
     console = Console()
 
-    update_user_data({"trace_consent": True, "first_execution_done": True})
+    update_user_data(
+        {
+            "trace_consent": True,
+            "first_execution_done": True,
+            "trace_consent_asked": True,
+        }
+    )
 
     panel = Panel(
         "✅ Trace collection enabled.\n\n"

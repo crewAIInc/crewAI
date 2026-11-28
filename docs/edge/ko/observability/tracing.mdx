@@ -199,6 +199,17 @@ View trace? [y/N] (20s timeout):
 "아니요"도 마찬가지입니다: 질문을 받지 않으려면 이 명령을 다시 실행하거나
 `CREWAI_TRACING_ENABLED=false`를 설정하세요.
 
+코딩 에이전트가 이런 실행을 시작하면 CrewAI는 에이전트가 추적을 켜는 방법을
+알 수 있도록 stderr에 한 줄을 한 번만 출력합니다:
+
+```text
+To debug runs step by step, run `crewai traces enable` to upload a trace of each run (prompts, inputs, outputs and tool calls).
+```
+
+이 줄은 어떤 답변도 저장하지 않습니다. 누군가 `crewai traces enable`을
+실행해야만 추적이 켜집니다. 답변한 후나 `CREWAI_TRACING_ENABLED`가
+설정된 경우에는 표시되지 않습니다.
+
 나중에 `crewai traces enable` 또는 `crewai traces disable`을 사용하거나 Crew
 또는 Flow에서 `tracing`을 설정하여 추적 설정을 변경할 수 있습니다.
 

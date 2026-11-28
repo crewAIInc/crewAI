@@ -17,6 +17,7 @@ import uuid
 import click
 from crewai_core.eval_handshake import run_awaited_by_evaluation
 from crewai_core.lock_store import lock as store_lock
+from crewai_core.runtime_env import detect_coding_agent
 from crewai_core.user_data import (
     _load_user_data as _load_user_data,
     _save_user_data as _save_user_data,
@@ -575,6 +576,12 @@ TRACE_PROMPT_BODY = (
     "The upload includes prompts, inputs, outputs, tool arguments and results."
 )
 TRACE_LINK_NOTICE = "Anyone with the link can open it for 24 hours."
+# Printed once to a coding agent, which cannot answer the question above. It
+# only says how; the agent running the command is what records the yes.
+TRACE_AGENT_HINT = (
+    "To debug runs step by step, run `crewai traces enable` to upload a trace "
+    "of each run (prompts, inputs, outputs and tool calls)."
+)
 
 
 def _prompt_can_be_shown() -> bool:
@@ -594,6 +601,41 @@ def _prompt_can_be_shown() -> bool:
         return False
 
     return _is_interactive_terminal()
+
+
+def _tell_coding_agent_how_to_trace() -> None:
+    """Print ``TRACE_AGENT_HINT`` once per user record, for a coding agent
+    running with the trace question unanswered and nobody to put it to.
+
+    Records only that the hint was shown (``trace_consent_agent_hint_shown``),
+    never an answer: the question stays open for the next run at a terminal.
+    Written to stderr so a program's own stdout stays clean.
+    """
+    if os.getenv("CREWAI_TRACING_ENABLED"):
+        return
+    if (
+        _is_test_environment()
+        or should_suppress_tracing_messages()
+        or _is_interactive_terminal()
+        or _host_asks_for_trace_consent()
+    ):
+        return
+    if detect_coding_agent() == "unknown":
+        return
+    try:
+        with store_lock(_user_data_lock_name()):
+            data = _load_user_data()
+            if (
+                _trace_question_asked(data)
+                or data.get("trace_consent_agent_hint_shown") is True
+            ):
+                return
+            data["trace_consent_agent_hint_shown"] = True
+            _user_data_file().write_text(json.dumps(data, indent=2))
+    except OSError:
+        # Unrecorded, the hint would print on every run: skip it instead.
+        return
+    click.echo(TRACE_AGENT_HINT, err=True)
 
 
 def prompt_user_for_trace_viewing(

@@ -199,6 +199,17 @@ apart from a real one, so a terminal asks once more. This includes a no saved
 by `crewai traces disable` on an earlier version: run it again, or set
 `CREWAI_TRACING_ENABLED=false`, so you are not asked.
 
+When a coding agent starts such a run, CrewAI prints one line to stderr,
+once, so the agent knows how to turn tracing on:
+
+```text
+To debug runs step by step, run `crewai traces enable` to upload a trace of each run (prompts, inputs, outputs and tool calls).
+```
+
+The line saves no answer: tracing turns on only when someone runs
+`crewai traces enable`. It is not shown after you have answered, or when
+`CREWAI_TRACING_ENABLED` is set.
+
 You can change tracing later with `crewai traces enable` or
 `crewai traces disable`, or by setting `tracing` on the Crew or Flow.
 

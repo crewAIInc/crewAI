@@ -25,7 +25,10 @@ from crewai.telemetry.tracing.grants import (
     TraceGrant,
     TraceGrantClient,
 )
+from click.testing import CliRunner
+from crewai_cli.cli import traces_enable
 from crewai_core import user_data
+from crewai_core.runtime_env import CODING_AGENT_ENV_MARKERS, GENERIC_AGENT_ENV_VARS
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 import pytest
 
@@ -61,6 +64,8 @@ def isolated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         "CREWAI_EPHEMERAL_TRACE_MAX_SPANS",
         "CREWAI_EPHEMERAL_TRACE_MAX_BYTES",
         "OTEL_SDK_DISABLED",
+        *(var for _, env_vars in CODING_AGENT_ENV_MARKERS for var in env_vars),
+        *GENERIC_AGENT_ENV_VARS,
     ):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "true")
@@ -557,3 +562,145 @@ def test_disabled_tracing_notices_read_the_same_in_every_unconsented_state(
     out = capsys.readouterr().out
     assert out.count("Tracing is disabled.") == 3
     assert out.count("crewai traces enable") == 3
+
+
+# -- the one-time hint for a coding agent -----------------------------------------
+
+AGENT_HINT = (
+    "To debug runs step by step, run `crewai traces enable` to upload a trace "
+    "of each run (prompts, inputs, outputs and tool calls)."
+)
+
+
+@pytest.fixture
+def coding_agent(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A run under Claude Code: no terminal for the question, output read back."""
+    monkeypatch.setenv("CLAUDECODE", "1")
+
+
+@pytest.mark.parametrize("recorded", [None, LEGACY_NO])
+@pytest.mark.usefixtures("coding_agent")
+def test_a_coding_agent_is_told_once_how_to_turn_traces_on(
+    capsys, grants, recorded
+) -> None:
+    if recorded is not None:
+        _record(recorded)
+
+    assert ExampleFlow().kickoff() == "hello world"
+    first = capsys.readouterr()
+    assert ExampleFlow().kickoff() == "hello world"
+    second = capsys.readouterr()
+
+    assert first.err.count(AGENT_HINT) == 1
+    assert AGENT_HINT not in first.out
+    assert AGENT_HINT not in second.err + second.out
+    assert user_data._load_user_data() == {
+        **(recorded or {}),
+        "trace_consent_agent_hint_shown": True,
+    }
+    assert grants == []
+
+
+@pytest.mark.usefixtures("coding_agent")
+def test_the_hint_is_no_answer_to_the_trace_question(monkeypatch, capsys) -> None:
+    """Being told is not consenting: tracing stays off, and the next run at a
+    terminal still asks."""
+    assert ExampleFlow().kickoff() == "hello world"
+    assert AGENT_HINT in capsys.readouterr().err
+
+    assert utils.should_enable_tracing() is False
+    assert user_data.has_user_declined_tracing() is False
+    assert utils.is_first_execution() is True
+    monkeypatch.setattr(utils, "_is_interactive_terminal", lambda: True)
+    assert utils.should_auto_collect_first_time_traces() is True
+
+
+@pytest.mark.parametrize("recorded", [ASKED_YES, LEGACY_YES, ASKED_NO])
+@pytest.mark.usefixtures("coding_agent")
+def test_a_coding_agent_is_not_told_once_the_question_is_answered(
+    capsys, recorded
+) -> None:
+    _record(recorded)
+
+    assert ExampleFlow().kickoff() == "hello world"
+
+    assert AGENT_HINT not in capsys.readouterr().err
+    assert user_data._load_user_data() == recorded
+
+
+@pytest.mark.parametrize("value", ["true", "false", "1", "0"])
+@pytest.mark.usefixtures("coding_agent")
+def test_a_coding_agent_is_not_told_when_the_env_var_decides(
+    monkeypatch, capsys, grants, value
+) -> None:
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", value)
+
+    assert ExampleFlow().kickoff() == "hello world"
+
+    assert AGENT_HINT not in capsys.readouterr().err
+    assert "trace_consent_agent_hint_shown" not in user_data._load_user_data()
+
+
+@pytest.mark.usefixtures("coding_agent", "person_at_terminal")
+def test_a_coding_agent_at_a_terminal_gets_the_question_not_the_hint(
+    capsys, grants, terminal_answer
+) -> None:
+    assert ExampleFlow().kickoff() == "hello world"
+
+    terminal_answer.assert_called_once_with(sharing=True)
+    assert AGENT_HINT not in capsys.readouterr().err
+    assert user_data._load_user_data() == ASKED_NO
+
+
+def test_a_run_without_a_coding_agent_is_not_told(capsys) -> None:
+    assert ExampleFlow().kickoff() == "hello world"
+
+    assert AGENT_HINT not in capsys.readouterr().err
+    assert user_data._load_user_data() == {}
+
+
+@pytest.mark.usefixtures("coding_agent")
+def test_a_host_that_silenced_tracing_messages_hides_the_hint(capsys) -> None:
+    token = utils.set_suppress_tracing_messages(True)
+    try:
+        assert ExampleFlow().kickoff() == "hello world"
+    finally:
+        utils._suppress_tracing_messages.reset(token)
+
+    assert AGENT_HINT not in capsys.readouterr().err
+    assert user_data._load_user_data() == {}
+
+
+@pytest.mark.usefixtures("coding_agent")
+def test_the_hint_is_not_printed_when_it_cannot_be_recorded(
+    monkeypatch, tmp_path, capsys
+) -> None:
+    """Unrecorded, it would print on every run; it waits for a run that can
+    record it."""
+    with monkeypatch.context() as unwritable:
+        unwritable.setattr(
+            utils, "_user_data_file", lambda: tmp_path / "missing-dir" / "user.json"
+        )
+        assert ExampleFlow().kickoff() == "hello world"
+        assert AGENT_HINT not in capsys.readouterr().err
+
+    assert ExampleFlow().kickoff() == "hello world"
+    assert capsys.readouterr().err.count(AGENT_HINT) == 1
+
+
+@pytest.mark.usefixtures("coding_agent")
+def test_enabling_traces_after_the_hint_records_an_asked_yes(
+    monkeypatch, tmp_path, capsys
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert ExampleFlow().kickoff() == "hello world"
+    assert AGENT_HINT in capsys.readouterr().err
+
+    result = CliRunner().invoke(traces_enable)
+
+    assert result.exit_code == 0, result.output
+    assert "Trace collection enabled." in result.output
+    data = user_data._load_user_data()
+    assert (data["trace_consent"], data["trace_consent_asked"]) == (True, True)
+    assert utils.should_enable_tracing() is True
+    assert utils.is_first_execution() is False

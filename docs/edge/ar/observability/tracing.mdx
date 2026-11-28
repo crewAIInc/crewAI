@@ -197,6 +197,17 @@ CrewAI دون سؤال عن رفض حقيقي، لذا تسأل الطرفية �
 الأمر `crewai traces disable` في إصدار سابق: شغّله مرة أخرى، أو عيّن
 `CREWAI_TRACING_ENABLED=false`، حتى لا يُطرح عليك السؤال.
 
+عندما يبدأ وكيل برمجة مثل هذا التشغيل، يطبع CrewAI سطراً واحداً إلى stderr،
+مرة واحدة فقط، حتى يعرف الوكيل كيف يفعّل التتبع:
+
+```text
+To debug runs step by step, run `crewai traces enable` to upload a trace of each run (prompts, inputs, outputs and tool calls).
+```
+
+لا يحفظ هذا السطر أي إجابة: لا يُفعَّل التتبع إلا عندما يشغّل أحد
+`crewai traces enable`. ولا يظهر بعد أن تجيب، أو عند تعيين
+`CREWAI_TRACING_ENABLED`.
+
 يمكنك تغيير إعداد التتبع لاحقاً باستخدام `crewai traces enable` أو
 `crewai traces disable`، أو بتعيين `tracing` على الطاقم أو التدفق.
 

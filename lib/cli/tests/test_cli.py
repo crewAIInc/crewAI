@@ -30,6 +30,7 @@ from crewai_cli.cli import (
     run,
     test,
     traces_disable,
+    traces_enable,
     traces_status,
     train,
     version,
@@ -1076,6 +1077,24 @@ def test_traces_disable_is_a_final_answer(runner):
     assert _load_user_data()["trace_consent_asked"] is True
     assert has_user_declined_tracing() is True
     assert "Disabled (user declined)" in runner.invoke(traces_status).output
+
+
+@pytest.mark.usefixtures("isolated_user_data")
+def test_traces_enable_is_a_final_answer(runner, tmp_path, monkeypatch):
+    # What a coding agent's run leaves behind: told how, but nothing answered.
+    update_user_data({"trace_consent_agent_hint_shown": True})
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(traces_enable)
+
+    assert result.exit_code == 0
+    assert _load_user_data() == {
+        "trace_consent_agent_hint_shown": True,
+        "trace_consent": True,
+        "first_execution_done": True,
+        "trace_consent_asked": True,
+    }
+    assert "Enabled (user consented)" in runner.invoke(traces_status).output
 
 
 @mock.patch("crewai_cli.task_outputs.load_task_outputs")

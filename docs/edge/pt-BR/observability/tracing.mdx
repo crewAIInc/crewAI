@@ -200,6 +200,18 @@ então um terminal pergunta mais uma vez. Isso inclui um "não" salvo por
 `crewai traces disable` em uma versão anterior: execute-o novamente, ou defina
 `CREWAI_TRACING_ENABLED=false`, para não ser perguntado.
 
+Quando um agente de programação inicia uma execução assim, o CrewAI imprime
+uma linha no stderr, uma única vez, para que o agente saiba como ativar o
+rastreamento:
+
+```text
+To debug runs step by step, run `crewai traces enable` to upload a trace of each run (prompts, inputs, outputs and tool calls).
+```
+
+A linha não salva nenhuma resposta: o rastreamento só é ativado quando alguém
+executa `crewai traces enable`. Ela não aparece depois que você responde, nem
+quando `CREWAI_TRACING_ENABLED` está definida.
+
 Você pode alterar o rastreamento depois com `crewai traces enable` ou
 `crewai traces disable`, ou definindo `tracing` no Crew ou Flow.
 
