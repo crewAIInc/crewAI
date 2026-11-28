@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 from crewai.hooks import (
@@ -158,6 +159,41 @@ class TestLLMHookDecorators:
         hooks[0](LLMCallHookContext(executor=mock_executor))
 
         assert execution_log == []
+
+    def test_before_llm_call_agent_filter_matches_standalone_lite_agent(self):
+        """Standalone LiteAgent runs have original_agent=None and match by executor role."""
+        execution_log = []
+
+        @before_llm_call(agents=["Researcher"])
+        def deny_hook(context):
+            execution_log.append(context.agent.role)
+            return False
+
+        hooks = get_before_llm_call_hooks()
+
+        matching_executor = SimpleNamespace(
+            role="Researcher",
+            original_agent=None,
+            messages=[],
+            llm=Mock(),
+            iterations=0,
+        )
+        matching_context = LLMCallHookContext(executor=matching_executor)
+        assert matching_context.agent is matching_executor
+        assert hooks[0](matching_context) is False
+        assert execution_log == ["Researcher"]
+
+        other_executor = SimpleNamespace(
+            role="Analyst",
+            original_agent=None,
+            messages=[],
+            llm=Mock(),
+            iterations=0,
+        )
+        other_context = LLMCallHookContext(executor=other_executor)
+        assert other_context.agent is other_executor
+        assert hooks[0](other_context) is None
+        assert execution_log == ["Researcher"]
 
 
 class TestToolHookDecorators:

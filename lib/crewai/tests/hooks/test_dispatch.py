@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import time
+from types import SimpleNamespace
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.hook_events import HookDispatchedEvent
@@ -38,6 +39,7 @@ class _Ctx:
     tool_name: str | None = None
     agent: object = None
     agent_role: str | None = None
+    executor: object = None
 
 
 @pytest.fixture(autouse=True)
@@ -171,6 +173,27 @@ class TestOnDecorator:
         dispatch(InterceptionPoint.PRE_MODEL_CALL, _Ctx(agent=None, agent_role=None))
         dispatch(InterceptionPoint.PRE_TOOL_CALL, _Ctx(tool_name=None))
         assert seen == []
+
+    def test_agent_filter_falls_back_to_executor_role_when_agent_is_none(self):
+        seen: list[str] = []
+
+        @on(InterceptionPoint.PRE_MODEL_CALL, agents=["Researcher"])
+        def agent_hook(ctx):
+            seen.append(ctx.executor.role)
+
+        dispatch(
+            InterceptionPoint.PRE_MODEL_CALL,
+            _Ctx(agent=None, agent_role=None, executor=SimpleNamespace(role="Writer")),
+        )
+        dispatch(
+            InterceptionPoint.PRE_MODEL_CALL,
+            _Ctx(
+                agent=None,
+                agent_role=None,
+                executor=SimpleNamespace(role="Researcher"),
+            ),
+        )
+        assert seen == ["Researcher"]
 
     def test_empty_allowlist_filters_match_nothing(self):
         seen: list[str] = []

@@ -387,6 +387,8 @@ def _wrap_with_filters(
                 return None
         if agents is not None:
             agent = getattr(ctx, "agent", None)
+            if agent is None:
+                agent = getattr(ctx, "executor", None)
             role = getattr(agent, "role", None) if agent is not None else None
             if role is None:
                 role = getattr(ctx, "agent_role", None)

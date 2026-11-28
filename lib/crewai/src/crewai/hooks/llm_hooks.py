@@ -95,11 +95,7 @@ class LLMCallHookContext:
                 self.task = cast("AgentExecutor", executor).task
                 self.crew = cast("AgentExecutor", executor).crew
             else:
-                self.agent = (
-                    executor.original_agent
-                    if hasattr(executor, "original_agent")
-                    else executor
-                )
+                self.agent = getattr(executor, "original_agent", None) or executor
                 self.task = None
                 self.crew = None
         else:
