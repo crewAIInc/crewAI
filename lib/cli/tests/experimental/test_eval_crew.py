@@ -3770,8 +3770,9 @@ def test_at_a_terminal_tracing_is_turned_on_only_after_the_consent_screen(
     assert "Tracing is now on" not in out  # nothing inferred: they were asked, or had said
     why = (
         "Your agentic system runs once and CrewAI AMP grades it, then shows you what "
-        "to fix. The run's trace is sent to CrewAI AMP."
+        "to fix."
     )
+    assert "The run's trace is sent to CrewAI AMP." not in out
     if answer == "already on":
         assert why not in out
         assert "No traced run of this crew yet: running it now to evaluate it." in out
@@ -3782,7 +3783,7 @@ def test_at_a_terminal_tracing_is_turned_on_only_after_the_consent_screen(
     if answer == "no":
         assert ran == [] and amp.calls == []
         assert not (directory / ".env").exists()
-        assert "Not now: nothing was run or sent to CrewAI AMP." in out
+        assert "Nothing was run" in out
         assert usage == ["cli_usage:eval_stopped:declined"]
     else:
         assert ran == [("true", False)]
@@ -3832,11 +3833,10 @@ def test_at_a_terminal_enter_shares_the_trace_and_only_a_no_runs_nothing(
         assert exited.value.code == 0
     out = " ".join(capsys.readouterr().out.split())
 
-    assert (
-        out.index("Your agentic system runs once and CrewAI AMP grades it, then shows you what to fix.")
-        < out.index("The run's trace is sent to CrewAI AMP.")
-        < out.index("Get a score for this run? [Y/n]")
-    )
+    assert out.index(
+        "Your agentic system runs once and CrewAI AMP grades it, then shows you what to fix."
+    ) < out.index("Get a score for this run? [Y/n]")
+    assert "The run's trace is sent to CrewAI AMP." not in out
     if shared:
         assert ran == ["true"] and amp.calls[0] == ("create", "the-new-run")
         assert "CREWAI_TRACING_ENABLED=true" in (directory / ".env").read_text()
@@ -3844,7 +3844,7 @@ def test_at_a_terminal_enter_shares_the_trace_and_only_a_no_runs_nothing(
     else:
         assert ran == [] and amp.calls == []
         assert not (directory / ".env").exists()
-        assert "Not now: nothing was run or sent to CrewAI AMP." in out
+        assert "Nothing was run" in out
         assert usage == ["cli_usage:eval_stopped:declined"]
 
 

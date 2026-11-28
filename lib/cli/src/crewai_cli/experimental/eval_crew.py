@@ -255,9 +255,6 @@ BEFORE_ASKING: dict[RunReason, str] = {
         "then shows you what to fix."
     ),
 }
-# Said on its own line after BEFORE_ASKING: the question is the consent to
-# upload, so it names what leaves the machine.
-SENT_TO_AMP = "The run's trace is sent to CrewAI AMP."
 # The person asked for the evaluation, so Enter means yes, as for a project that
 # turned tracing off. There is no timeout: an unanswered question sends nothing.
 SHARE_TO_EVALUATE_QUESTION = "Get a score for this run?"
@@ -279,7 +276,7 @@ TRACING_OFF_UNATTENDED = (
 )
 TRACING_STAYS_OFF = "Nothing was run: tracing stays off for this project."
 TRACING_IS_ON = "Tracing is on for this project — its runs are traced to CrewAI AMP."
-NOT_SHARED = "Not now: nothing was run or sent to CrewAI AMP."
+NOT_SHARED = "Nothing was run"
 UNTRUSTED_AMP = (
     "The crew was not run: its trace would go to {url}, an AMP this machine is not "
     "set up to trust with its CrewAI login. Set that AMP up (`crewai enterprise "
@@ -1253,7 +1250,6 @@ def _ask_before_the_first_enable(why: RunReason) -> None:
     whose login AMP refuses) is here: say why the crew runs, then ask before
     turning tracing on. Enter means yes; a no runs nothing."""
     console.print(Text(BEFORE_ASKING[why]), style="bold")
-    console.print(Text(SENT_TO_AMP), style="dim")
     if not click.confirm(SHARE_TO_EVALUATE_QUESTION, default=True):
         record_stop("declined")
         console.print(NOT_SHARED, style="yellow")

@@ -3036,7 +3036,8 @@ async def test_evaluate_consent_screen_evaluates_on_enter_and_says_what_it_does(
         "Your agentic system runs once more and CrewAI AMP grades it, "
         "then shows you what to fix." in text
     )
-    assert "The run's trace is sent to CrewAI AMP." in text
+    assert text.endswith("CrewAI AMP grades your run")
+    assert "The run's trace is sent to CrewAI AMP." not in text
     assert "seconds" not in text
 
 

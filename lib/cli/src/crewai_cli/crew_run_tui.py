@@ -367,7 +367,7 @@ class EvaluateConsentScreen(TraceConsentScreen):
         t.append("  CrewAI AMP grades it, then shows you\n", style=_C_DIM)
         t.append("  what to fix.\n\n", style=_C_DIM)
         # The upload disclosure: this screen is the consent for a logged-out run.
-        t.append("  The run's trace is sent to CrewAI AMP.\n", style=_C_MUTED)
+        t.append("  CrewAI AMP grades your run\n", style=_C_MUTED)
         return t
 
 

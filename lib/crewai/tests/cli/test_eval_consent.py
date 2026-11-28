@@ -194,12 +194,13 @@ def test_logged_out_the_person_is_asked_and_only_a_no_runs_nothing(
 
     assert project.asked == ["Get a score for this run?"]
     assert "CrewAI AMP grades it, then shows you what to fix." in out
-    assert "The run's trace is sent to CrewAI AMP." in out
+    assert "The run's trace is sent to CrewAI AMP." not in out
     if yes:
         assert project.ran == [("true", False)]
         assert project.amp.created == ["the-new-run"]
     else:
         assert project.ran == [] and project.amp.created == []
+        assert "Nothing was run" in out
         assert _env(project.directory) == ""
         assert project.usage == ["cli_usage:eval_stopped:declined"]
 
