@@ -16,6 +16,7 @@ import requests
 
 from crewai_tools.security.safe_path import format_error_for_display
 from crewai_tools.security.safe_requests import safe_get_bounded
+from crewai_tools.utilities.html_text import visible_text
 
 
 _DEFAULT_MAX_BYTES: Final[int] = 5 * 1024 * 1024
@@ -470,7 +471,7 @@ class URLReadTool(BaseTool):
         for element in soup(["script", "style"]):
             element.decompose()
 
-        text = _SPACES_PATTERN.sub(" ", soup.get_text(" "))
+        text = _SPACES_PATTERN.sub(" ", visible_text(soup))
         return _NEWLINE_PATTERN.sub("\n", text).strip()
 
     def _extract(self, body: bytes, kind: str, content_type: str) -> str:

@@ -1,5 +1,6 @@
 from unittest.mock import Mock, patch
 
+from bs4 import BeautifulSoup, NavigableString
 from crewai_tools.rag.base_loader import LoaderResult
 from crewai_tools.rag.loaders.webpage_loader import WebPageLoader
 from crewai_tools.rag.source_content import SourceContent
@@ -17,7 +18,7 @@ class TestWebPageLoader:
 
     def setup_mock_soup(self, text, title=None, script_style_elements=None):
         soup = Mock()
-        soup.get_text.return_value = text
+        soup.contents = [NavigableString(text)]
         soup.title = Mock(string=title) if title is not None else None
         soup.return_value = script_style_elements or []
         return soup
@@ -165,3 +166,14 @@ class TestWebPageLoader:
             mock_bs.return_value = self.setup_mock_soup("Content")
             result = WebPageLoader().load(SourceContent("https://example.com"))
             assert result.metadata["content_type"] == ctype
+
+    @patch("crewai_tools.security.safe_requests._raw_get")
+    def test_load_webpage_keeps_words_whole_across_inline_elements(self, mock_get):
+        mock_get.return_value = self.setup_mock_response(
+            "<html><body><h1>Setup</h1><p>That is un<b>believ</b>able, "
+            'see <a href="/docs">the docs</a>.</p></body></html>'
+        )
+
+        result = WebPageLoader().load(SourceContent("https://example.com"))
+
+        assert result.content == "Setup\nThat is unbelievable, see the docs."
