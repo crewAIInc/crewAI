@@ -63,6 +63,13 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
+from crewai_cli.authentication.placeholder import (
+    Placeholder,
+    discard_rejected_placeholder,
+    placeholder_client,
+    placeholder_for,
+    remind_placeholder,
+)
 from crewai_cli.authentication.token import AuthError, get_auth_token
 from crewai_cli.plus_api import PlusAPI
 from crewai_cli.utils import (
@@ -1946,18 +1953,27 @@ def eval_models(
         client = _amp_client(trusted)
     except EvaluationStoppedError as stopped:
         _fail(str(stopped))
+    placeholder = None
     if client.api_key is None:
-        _fail(LOGIN_REQUIRED)
+        client, placeholder = _placeholder_client(client.base_url, trusted)
 
-    try:
-        response = client.create_models_evaluation(
-            models,
-            project_id=project_id,
-            eval_config=project_eval_config(),
-            deployment_id=deployment,
-        )
-    except httpx.HTTPError as error:
-        _fail(f"Could not reach AMP to start the comparison: {error}")
+    def start(client: PlusAPI) -> httpx.Response:
+        try:
+            return client.create_models_evaluation(
+                models,
+                project_id=project_id,
+                eval_config=project_eval_config(),
+                deployment_id=deployment,
+            )
+        except httpx.HTTPError as error:
+            _fail(f"Could not reach AMP to start the comparison: {error}")
+
+    response = start(client)
+    if response.status_code == 401 and placeholder is not None:
+        # Expired or removed: one replacement, and a second 401 stops as any other.
+        discard_rejected_placeholder()
+        client, placeholder = _placeholder_client(client.base_url, trusted)
+        response = start(client)
     try:
         started = _accepted(response, "the comparison", about_a_deployment=True)
     except EvaluationStoppedError as stopped:
@@ -2009,8 +2025,26 @@ def eval_models(
     # The criteria the comparison was graded on, for the project to edit — only
     # when it has none, exactly as after a Mode 1 evaluation.
     _say_where_the_criteria_live(write_eval_config(finished))
+    if placeholder is not None:
+        remind_placeholder(placeholder)
     if finished.get("status") != "done":
         raise SystemExit(1)
+
+
+def _placeholder_client(
+    base_url: str, trusted: set[str]
+) -> tuple[PlusAPI, Placeholder]:
+    """Not logged in: the temporary account for BASE_URL's AMP, saved or created
+    now, when the login would be sent there; otherwise the LOGIN_REQUIRED stop."""
+    origin = _origin(base_url)
+    placeholder = (
+        placeholder_for(base_url, source="eval")
+        if origin in trusted and _encrypted(origin)
+        else None
+    )
+    if placeholder is None:
+        _fail(LOGIN_REQUIRED)
+    return placeholder_client(placeholder, base_url), placeholder
 
 
 def _progress_line(payload: dict[str, Any]) -> str | None:

@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 import json
 
 from crewai_core.telemetry import Telemetry
 import httpx
 from rich.console import Console
 
+from crewai_cli.authentication.placeholder import (
+    Placeholder,
+    PlaceholderSource,
+    discard_rejected_placeholder,
+    placeholder_client,
+    placeholder_for,
+)
 from crewai_cli.authentication.token import get_auth_token
 from crewai_cli.plus_api import PlusAPI
 
@@ -17,6 +25,23 @@ class AuthenticationRequiredError(SystemExit):
     """Raised when a Plus API command needs the user to log in first."""
 
 
+class PlaceholderRejectedError(AuthenticationRequiredError):
+    """AMP answered 401 to the temporary account, which is now discarded."""
+
+
+def retry_once_on_placeholder_rejection(action: Callable[[], None]) -> None:
+    """Run ACTION, and once more when AMP refused the temporary account it used.
+
+    The refused account has expired or was removed and is already discarded,
+    so the second run creates its replacement. Only once: a second refusal
+    stops the command like any other 401.
+    """
+    try:
+        action()
+    except PlaceholderRejectedError:
+        action()
+
+
 class BaseCommand:
     def __init__(self) -> None:
         self._telemetry = Telemetry()
@@ -24,11 +49,30 @@ class BaseCommand:
 
 
 class PlusAPIMixin:
-    def __init__(self, telemetry: Telemetry, *, base_url: str | None = None) -> None:
+    def __init__(
+        self,
+        telemetry: Telemetry,
+        *,
+        base_url: str | None = None,
+        placeholder_source: PlaceholderSource | None = None,
+    ) -> None:
+        """Connect to AMP with the saved login.
+
+        With no login and a PLACEHOLDER_SOURCE, the temporary account for that
+        AMP is used instead, created now when a coding agent or a person at a
+        terminal runs the command (see `crewai_cli.authentication.placeholder`).
+        """
+        self.placeholder: Placeholder | None = None
         try:
             telemetry.set_tracer()
             self.plus_api_client = PlusAPI(api_key=get_auth_token(), base_url=base_url)
         except Exception:
+            if placeholder_source is not None:
+                amp_url = PlusAPI(base_url=base_url).base_url
+                self.placeholder = placeholder_for(amp_url, source=placeholder_source)
+                if self.placeholder is not None:
+                    self.plus_api_client = placeholder_client(self.placeholder, amp_url)
+                    return
             telemetry.deploy_signup_error_span()
             console.print(
                 "Please sign up/login to CrewAI+ before using the CLI.",
@@ -44,9 +88,13 @@ class PlusAPIMixin:
             response: The response from the Plus API.
 
         Raises:
+            PlaceholderRejectedError: AMP answered 401 to the temporary account.
             AuthenticationRequiredError: AMP answered 401 (exit code 1).
             SystemExit: For any other non-2xx response or a body that is not JSON.
         """
+        if response.status_code == 401 and self.placeholder is not None:
+            discard_rejected_placeholder()
+            raise PlaceholderRejectedError(1)
         if response.status_code == 401:
             # AMP also answers 401 for a valid token whose account it does not
             # accept (no AMP user, not activated), which a new login cannot fix:

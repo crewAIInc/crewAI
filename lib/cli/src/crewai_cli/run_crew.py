@@ -987,11 +987,18 @@ def _chain_deploy() -> None:
         console.print(f"\nDeploy failed{detail}\n", style="bold red")
 
     try:
-        from crewai_cli.command import AuthenticationRequiredError
+        from crewai_cli.command import (
+            AuthenticationRequiredError,
+            retry_once_on_placeholder_rejection,
+        )
         from crewai_cli.deploy.main import DeployCommand
 
         console.print("\nStarting deployment…\n", style="bold #FF5A50")
-        DeployCommand().create_crew(confirm=True, skip_validate=True, source="tui")
+        retry_once_on_placeholder_rejection(
+            lambda: DeployCommand().create_crew(
+                confirm=True, skip_validate=True, source="tui"
+            )
+        )
     except AuthenticationRequiredError:
         from crewai_cli.authentication.main import AuthenticationCommand
 

@@ -928,6 +928,9 @@ def login() -> None:
 )
 def logout(reset: bool) -> None:
     """Logout from CrewAI AMP."""
+    from crewai_cli.authentication.placeholder import forget_placeholder
+
+    forget_placeholder()
     settings = Settings()
     if reset:
         settings.reset()
@@ -963,8 +966,13 @@ def deploy_create(yes: bool, skip_validate: bool, force_zip: bool) -> None:
     # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
     # never rewrites an unrelated directory. Never called from the SDK during kickoff.
     get_or_create_project_id()
-    deploy_cmd = DeployCommand()
-    deploy_cmd.create_crew(yes, skip_validate=skip_validate, force_zip=force_zip)
+    from crewai_cli.command import retry_once_on_placeholder_rejection
+
+    retry_once_on_placeholder_rejection(
+        lambda: DeployCommand().create_crew(
+            yes, skip_validate=skip_validate, force_zip=force_zip
+        )
+    )
 
 
 @deploy.command(name="list")
@@ -997,8 +1005,13 @@ def deploy_push(uuid: str | None, skip_validate: bool, force: bool) -> None:
     # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
     # never rewrites an unrelated directory. Never called from the SDK during kickoff.
     get_or_create_project_id()
-    deploy_cmd = DeployCommand()
-    deploy_cmd.deploy(uuid=uuid, skip_validate=skip_validate, force=force)
+    from crewai_cli.command import retry_once_on_placeholder_rejection
+
+    retry_once_on_placeholder_rejection(
+        lambda: DeployCommand().deploy(
+            uuid=uuid, skip_validate=skip_validate, force=force
+        )
+    )
 
 
 @deploy.command(name="validate")

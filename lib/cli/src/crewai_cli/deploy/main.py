@@ -11,6 +11,7 @@ import httpx
 from rich.console import Console
 
 from crewai_cli import git
+from crewai_cli.authentication.placeholder import remind_placeholder
 from crewai_cli.command import BaseCommand, PlusAPIMixin
 from crewai_cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai_cli.deploy.archive import ArchiveError, create_project_zip
@@ -305,7 +306,9 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         """
 
         BaseCommand.__init__(self)
-        PlusAPIMixin.__init__(self, telemetry=self._telemetry)
+        PlusAPIMixin.__init__(
+            self, telemetry=self._telemetry, placeholder_source="deploy"
+        )
         self.project_name = get_project_name(require=True)
         # Sent with every create and push, so AMP knows which project a
         # deployment runs — `crewai eval --models` finds the deployment by it.
@@ -347,6 +350,8 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         console.print("crewai deploy status")
         console.print(" or")
         console.print(f'crewai deploy status --uuid "{json_response["uuid"]}"')
+        if self.placeholder is not None:
+            remind_placeholder(self.placeholder)
         self._open_deployment_page(json_response)
 
     def _display_logs(self, log_messages: list[dict[str, Any]]) -> None:
@@ -834,6 +839,8 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         console.print("crewai deploy push")
         console.print(" or")
         console.print(f"crewai deploy push --uuid {json_response['uuid']}")
+        if self.placeholder is not None:
+            remind_placeholder(self.placeholder)
         self._open_deployment_page(json_response)
 
     def list_crews(self) -> None:

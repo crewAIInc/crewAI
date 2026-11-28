@@ -30,6 +30,24 @@ class PlusAPI(_CorePlusAPI):
     # for a large comparison — and AMP gathers them before it answers.
     EVALUATION_EXPORT_TIMEOUT = httpx.Timeout(EVALUATION_POLL_TIMEOUT, read=120.0)
     CLI_INTEGRATION_TOKEN_RESOURCE = "/crewai_plus/api/v1/me/integration-token"  # noqa: S105 - API path, not a secret
+    PLACEHOLDER_ACCOUNTS_RESOURCE = "/crewai_plus/api/v1/placeholder_accounts"
+    PLACEHOLDER_ACCOUNT_TIMEOUT = 15.0
+
+    def create_placeholder_account(
+        self, *, source: str, coding_agent: str
+    ) -> httpx.Response:
+        """Ask AMP for a temporary account; the request carries no credential.
+
+        SOURCE is the command that needs it (`deploy` or `eval`) and
+        CODING_AGENT the assistant `detect_coding_agent()` names; both are
+        counted by AMP and change nothing about the account.
+        """
+        return self._make_request(
+            "POST",
+            self.PLACEHOLDER_ACCOUNTS_RESOURCE,
+            json={"source": source, "coding_agent": coding_agent},
+            timeout=self.PLACEHOLDER_ACCOUNT_TIMEOUT,
+        )
 
     def get_integration_token(self) -> str:
         """Return the Enterprise Action Auth Token for the active organization."""

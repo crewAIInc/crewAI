@@ -23,3 +23,21 @@ def no_provider_keys(monkeypatch):
         for details in entries:
             if "key_name" in details:
                 monkeypatch.delenv(str(details["key_name"]).upper(), raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _no_coding_agent_detected(monkeypatch):
+    """Run as CI does, whoever runs the suite: an assistant's markers in the
+    environment make a command with no login create a temporary AMP account
+    (`crewai_cli.authentication.placeholder`). A test that needs an assistant
+    sets its marker itself."""
+    from crewai_core.runtime_env import (
+        CODING_AGENT_ENV_MARKERS,
+        GENERIC_AGENT_ENV_VARS,
+    )
+
+    for _, names in CODING_AGENT_ENV_MARKERS:
+        for name in names:
+            monkeypatch.delenv(name, raising=False)
+    for name in GENERIC_AGENT_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
