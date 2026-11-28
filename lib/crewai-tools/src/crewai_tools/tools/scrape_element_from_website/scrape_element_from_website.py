@@ -16,10 +16,25 @@ except ImportError:
 
 
 class FixedScrapeElementFromWebsiteToolSchema(BaseModel):
-    """Input for ScrapeElementFromWebsiteTool."""
+    """Input for ScrapeElementFromWebsiteTool when both fields are fixed."""
 
 
-class ScrapeElementFromWebsiteToolSchema(FixedScrapeElementFromWebsiteToolSchema):
+class UrlOnlyScrapeElementFromWebsiteToolSchema(BaseModel):
+    """Input when only css_element needs to be provided."""
+
+    css_element: str = Field(
+        ...,
+        description="Mandatory css reference for element to scrape from the website",
+    )
+
+
+class CssOnlyScrapeElementFromWebsiteToolSchema(BaseModel):
+    """Input when only website_url needs to be provided."""
+
+    website_url: str = Field(..., description="Mandatory website url to read the file")
+
+
+class ScrapeElementFromWebsiteToolSchema(BaseModel):
     """Input for ScrapeElementFromWebsiteTool."""
 
     website_url: str = Field(..., description="Mandatory website url to read the file")
@@ -58,14 +73,23 @@ class ScrapeElementFromWebsiteTool(BaseTool):
         super().__init__(**kwargs)
         if website_url is not None:
             self.website_url = website_url
-            self.css_element = css_element
             self.description = (
                 f"A tool that can be used to read {website_url}'s content."
             )
+        if css_element is not None:
+            self.css_element = css_element
+        if cookies is not None:
+            self.cookies = {cookies["name"]: os.getenv(cookies["value"]) or ""}
+
+        if self.website_url is not None and self.css_element is not None:
             self.args_schema = FixedScrapeElementFromWebsiteToolSchema
+        elif self.website_url is not None:
+            self.args_schema = UrlOnlyScrapeElementFromWebsiteToolSchema
+        elif self.css_element is not None:
+            self.args_schema = CssOnlyScrapeElementFromWebsiteToolSchema
+
+        if self.website_url is not None or self.css_element is not None:
             self._generate_description()
-            if cookies is not None:
-                self.cookies = {cookies["name"]: os.getenv(cookies["value"]) or ""}
 
     def _run(
         self,
