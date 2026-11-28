@@ -170,7 +170,7 @@ def test_a_login_amp_refuses_is_asked_as_logged_out(project, capsys, login_answe
     out = " ".join(capsys.readouterr().out.split())
 
     assert exited.value.code == 0
-    assert project.asked == ["Run your crew and grade it?"]
+    assert project.asked == ["Get a score for this run?"]
     assert eval_module.TRACING_NOW_ON not in out
     assert project.ran == [] and project.amp.created == []
     assert _env(project.directory) == ""
@@ -192,8 +192,9 @@ def test_logged_out_the_person_is_asked_and_only_a_no_runs_nothing(
         assert exited.value.code == 0
     out = " ".join(capsys.readouterr().out.split())
 
-    assert project.asked == ["Run your crew and grade it?"]
-    assert "You'll get a score and what to fix." in out
+    assert project.asked == ["Get a score for this run?"]
+    assert "CrewAI AMP grades it, then shows you what to fix." in out
+    assert "The run's trace is sent to CrewAI AMP." in out
     if yes:
         assert project.ran == [("true", False)]
         assert project.amp.created == ["the-new-run"]
@@ -239,7 +240,7 @@ def test_an_expired_login_is_treated_as_logged_out(
 
     eval_module.eval_crew()
 
-    assert project.asked == (["Run your crew and grade it?"] if asked else [])
+    assert project.asked == (["Get a score for this run?"] if asked else [])
     assert project.ran == [("true", not asked)]
 
 
@@ -272,7 +273,7 @@ def test_the_run_apps_evaluate_asks_only_when_logged_out(project, monkeypatch, l
         assert (
             crew_run_tui.EvaluateConsentScreen.YES_LABEL,
             crew_run_tui.EvaluateConsentScreen.NO_LABEL,
-        ) == ("Evaluate", "Not now")
+        ) == ("Get score", "Not now")
 
 
 def test_the_run_apps_evaluate_logged_in_hands_crewai_eval_the_line_to_say(
@@ -323,7 +324,7 @@ def test_the_run_apps_evaluate_with_a_login_amp_refuses_is_asked_in_the_terminal
         run_crew_module._chain_traced_rerun()
 
     assert exited.value.code == 0
-    assert project.asked == ["Run your crew and grade it?"]
+    assert project.asked == ["Get a score for this run?"]
     assert project.ran == [] and _env(project.directory) == ""
 
 
@@ -366,7 +367,7 @@ def test_a_login_the_projects_env_points_to_is_no_consent(project, two_logins, c
 
     assert exited.value.code == 0
     assert eval_module.saved_login() == "someone-elses-token"  # what the run would carry
-    assert project.asked == ["Run your crew and grade it?"]
+    assert project.asked == ["Get a score for this run?"]
     assert eval_module.TRACING_NOW_ON not in out
     assert project.ran == [] and project.amp.created == [] and project.amp.login_checks == []
     assert _env(project.directory) == _FOREIGN_HOME_ENV

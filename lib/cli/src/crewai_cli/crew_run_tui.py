@@ -357,15 +357,17 @@ class EvaluateConsentScreen(TraceConsentScreen):
     asked for the evaluation; Not now or Esc runs nothing. Nothing times out.
     Logged in, pressing Evaluate is the consent and this is not shown."""
 
-    YES_LABEL = "Evaluate"
+    YES_LABEL = "Get score"
     NO_LABEL = "Not now"
 
     def _build_content(self) -> Text:
         t = Text()
-        t.append("  Grade this run?\n\n", style=f"bold {_C_TEXT}")
-        t.append("  CrewAI runs your crew once more and sends\n", style=_C_DIM)
-        t.append("  the run to CrewAI AMP to grade it.\n\n", style=_C_DIM)
-        t.append("  You'll get a score and what to fix.\n", style=_C_MUTED)
+        t.append("  Get a score for this run?\n\n", style=f"bold {_C_TEXT}")
+        t.append("  Your agentic system runs once more and\n", style=_C_DIM)
+        t.append("  CrewAI AMP grades it, then shows you\n", style=_C_DIM)
+        t.append("  what to fix.\n\n", style=_C_DIM)
+        # The upload disclosure: this screen is the consent for a logged-out run.
+        t.append("  The run's trace is sent to CrewAI AMP.\n", style=_C_MUTED)
         return t
 
 

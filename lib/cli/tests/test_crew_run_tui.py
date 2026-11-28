@@ -3030,13 +3030,13 @@ async def test_evaluate_consent_screen_evaluates_on_enter_and_says_what_it_does(
         await pilot.pause()
 
     assert app.answers == [shared]
-    assert (label, no_label) == ("Evaluate", "Not now")
-    assert text.startswith("Grade this run?")
+    assert (label, no_label) == ("Get score", "Not now")
+    assert text.startswith("Get a score for this run?")
     assert (
-        "CrewAI runs your crew once more and sends the run to CrewAI AMP to grade it."
-        in text
+        "Your agentic system runs once more and CrewAI AMP grades it, "
+        "then shows you what to fix." in text
     )
-    assert "You'll get a score and what to fix." in text
+    assert "The run's trace is sent to CrewAI AMP." in text
     assert "seconds" not in text
 
 

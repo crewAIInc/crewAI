@@ -3769,8 +3769,8 @@ def test_at_a_terminal_tracing_is_turned_on_only_after_the_consent_screen(
     assert consent_screen.asked == ([] if answer == "already on" else [{"default": True}])
     assert "Tracing is now on" not in out  # nothing inferred: they were asked, or had said
     why = (
-        "To grade this crew, CrewAI runs it once and sends the run to CrewAI AMP. "
-        "You'll get a score and what to fix."
+        "Your agentic system runs once and CrewAI AMP grades it, then shows you what "
+        "to fix. The run's trace is sent to CrewAI AMP."
     )
     if answer == "already on":
         assert why not in out
@@ -3832,7 +3832,11 @@ def test_at_a_terminal_enter_shares_the_trace_and_only_a_no_runs_nothing(
         assert exited.value.code == 0
     out = " ".join(capsys.readouterr().out.split())
 
-    assert "Run your crew and grade it? [Y/n]" in out
+    assert (
+        out.index("Your agentic system runs once and CrewAI AMP grades it, then shows you what to fix.")
+        < out.index("The run's trace is sent to CrewAI AMP.")
+        < out.index("Get a score for this run? [Y/n]")
+    )
     if shared:
         assert ran == ["true"] and amp.calls[0] == ("create", "the-new-run")
         assert "CREWAI_TRACING_ENABLED=true" in (directory / ".env").read_text()
