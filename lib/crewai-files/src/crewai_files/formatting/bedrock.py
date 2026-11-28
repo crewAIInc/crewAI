@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import re
 from typing import Any
 
 from crewai_files.core.resolved import (
@@ -36,6 +37,61 @@ _VIDEO_FORMATS: dict[str, str] = {
     "video/mpeg": "mpeg",
     "video/3gpp": "three_gp",
 }
+
+# Converse API DocumentBlock.name only accepts alphanumerics, single
+# whitespace characters, hyphens, parentheses and square brackets, and is
+# limited to 200 characters.
+_DOCUMENT_NAME_DISALLOWED = re.compile(r"[^A-Za-z0-9\s\-()\[\]]+")
+_DOCUMENT_NAME_WHITESPACE = re.compile(r"\s+")
+_DOCUMENT_NAME_MAX_LENGTH = 200
+
+
+def _sanitize_document_name(name: str | None) -> str:
+    """Make a file name acceptable as a Bedrock document block name.
+
+    Characters the Converse API rejects (such as ``.`` or ``_`` in
+    ``"q3_report.pdf"``) are replaced with spaces and whitespace runs are
+    collapsed, so ``"q3_report.pdf"`` becomes ``"q3 report pdf"``.
+
+    Args:
+        name: Original file name.
+
+    Returns:
+        A valid document name, or ``"document"`` if nothing usable remains.
+    """
+    cleaned = _DOCUMENT_NAME_DISALLOWED.sub(" ", name or "")
+    cleaned = _DOCUMENT_NAME_WHITESPACE.sub(" ", cleaned).strip()
+    cleaned = cleaned[:_DOCUMENT_NAME_MAX_LENGTH].rstrip()
+    return cleaned or "document"
+
+
+def dedupe_document_names(blocks: list[dict[str, Any]]) -> None:
+    """Give every Bedrock document block in a request a distinct name.
+
+    Sanitizing can map different file names onto the same document name
+    (``"a.pdf"`` and ``"a_pdf"`` both become ``"a pdf"``), and several
+    unusable names fall back to ``"document"``. Bedrock rejects a request
+    whose document blocks repeat a name, so later duplicates get a
+    ``" (2)"``, ``" (3)"``, ... suffix while staying within the length limit.
+
+    Args:
+        blocks: Content blocks for one request; updated in place.
+    """
+    seen: set[str] = set()
+    for block in blocks:
+        document = block.get("document")
+        if not isinstance(document, dict) or not isinstance(document.get("name"), str):
+            continue
+        base = document["name"]
+        candidate = base
+        counter = 2
+        while candidate.casefold() in seen:
+            suffix = f" ({counter})"
+            trimmed = base[: _DOCUMENT_NAME_MAX_LENGTH - len(suffix)].rstrip()
+            candidate = f"{trimmed}{suffix}"
+            counter += 1
+        seen.add(candidate.casefold())
+        document["name"] = candidate
 
 
 class BedrockFormatter:
@@ -129,7 +185,7 @@ class BedrockFormatter:
         if doc_format:
             return {
                 "document": {
-                    "name": name or "document",
+                    "name": _sanitize_document_name(name),
                     "format": doc_format,
                     "source": {"s3Location": s3_location},
                 }
@@ -176,7 +232,7 @@ class BedrockFormatter:
         if doc_format:
             return {
                 "document": {
-                    "name": name or "document",
+                    "name": _sanitize_document_name(name),
                     "format": doc_format,
                     "source": {"bytes": file_bytes},
                 }
