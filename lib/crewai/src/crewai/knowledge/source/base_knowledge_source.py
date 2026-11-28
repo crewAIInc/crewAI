@@ -49,9 +49,13 @@ class BaseKnowledgeSource(BaseModel, ABC):
         if not text:
             return []
         if self.chunk_size <= 0:
-            raise ValueError(f"chunk_size must be greater than 0, got {self.chunk_size}")
+            raise ValueError(
+                f"chunk_size must be greater than 0, got {self.chunk_size}"
+            )
         if self.chunk_overlap < 0:
-            raise ValueError(f"chunk_overlap must not be negative, got {self.chunk_overlap}")
+            raise ValueError(
+                f"chunk_overlap must not be negative, got {self.chunk_overlap}"
+            )
         step = self.chunk_size - self.chunk_overlap
         if step <= 0:
             raise ValueError(
