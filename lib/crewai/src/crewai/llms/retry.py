@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable, Iterator
+from collections.abc import Awaitable, Callable, Iterator, Mapping
 import contextvars
 import random
 import time
@@ -209,11 +209,17 @@ def _retry_after_seconds(error: BaseException) -> float | None:
     """Read a numeric ``Retry-After`` hint from common SDK response shapes."""
     for candidate in _ThrottlingErrorClassifier.iter_error_chain(error):
         headers = getattr(candidate, "headers", None)
-        response = getattr(candidate, "response", None)
-        if headers is None and isinstance(response, dict):
-            metadata = response.get("ResponseMetadata") or {}
-            headers = metadata.get("HTTPHeaders") or response.get("headers")
-        if not isinstance(headers, dict):
+        if headers is None:
+            response = getattr(candidate, "response", None)
+            if isinstance(response, dict):
+                metadata = response.get("ResponseMetadata") or {}
+                headers = metadata.get("HTTPHeaders") or response.get("headers")
+            else:
+                # httpx (openai/anthropic/azure SDKs) and requests keep the
+                # response headers on the response object, and httpx.Headers is
+                # a Mapping rather than a dict.
+                headers = getattr(response, "headers", None)
+        if not isinstance(headers, Mapping):
             continue
         retry_after = headers.get("retry-after") or headers.get("Retry-After")
         if retry_after is None:
