@@ -68,12 +68,16 @@ print(result)
 
 | Argument | Type | Required | Default | Description |
 |:---------|:-----|:---------|:--------|:------------|
-| **crew_api_url** | `str` | Yes | None | Base URL of the CrewAI Platform automation API |
-| **crew_bearer_token** | `str` | Yes | None | Bearer token for API authentication |
-| **crew_name** | `str` | Yes | None | Name of the crew automation |
-| **crew_description** | `str` | Yes | None | Description of what the crew automation does |
+| **crew_api_url** | `str` | No | `None` | Base URL of the CrewAI Platform automation API. Falls back to the `CREWAI_API_URL` environment variable when omitted. |
+| **crew_bearer_token** | `str` | No | `None` | Bearer token for API authentication. Falls back to the `CREWAI_BEARER_TOKEN` environment variable when omitted. |
+| **crew_name** | `str` | No | generic name | Name of the crew automation. Set explicitly outside CrewAI AMP Studio so the LLM sees a meaningful tool name. |
+| **crew_description** | `str` | No | generic description | Description of what the crew automation does. Set explicitly for the same reason as `crew_name`. |
 | **max_polling_time** | `int` | No | 600 | Maximum time in seconds to wait for task completion |
 | **crew_inputs** | `dict` | No | None | Dictionary defining custom input schema fields |
+
+If `crew_api_url`/`crew_bearer_token` are still missing at run time (neither passed
+explicitly nor available via the environment variables below), the tool raises a clear
+error explaining what's missing.
 
 ## Environment Variables
 
