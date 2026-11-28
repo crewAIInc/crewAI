@@ -20,7 +20,8 @@ Design notes:
   block on heavy I/O (same restriction as the legacy hooks).
 - ``HookAborted`` propagates by design. Any other exception raised by a hook is
   swallowed (fail-open) to preserve the framework's protection against a buggy
-  user hook.
+  user hook -- unless the caller passes ``on_error="abort"``, in which case
+  the exception is converted to ``HookAborted`` (fail-closed; see #9434).
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ from enum import Enum
 from functools import wraps
 import inspect
 import time
-from typing import Any
+from typing import Any, Literal
 
 from crewai.utilities.string_utils import sanitize_tool_name
 
@@ -268,11 +269,14 @@ def _invoke_hook(
     ctx: Any,
     reducer: Reducer,
     verbose: bool,
+    on_error: Literal["ignore", "abort"] = "ignore",
 ) -> bool:
     """Run a single hook and apply its result via the reducer.
 
     Returns whether the context was modified. Raises :class:`HookAborted` (with
-    ``source`` populated) to abort; any other exception is swallowed (fail-open).
+    ``source`` populated) to abort; any other exception is swallowed (fail-open)
+    unless ``on_error="abort"``, in which case it is converted to
+    :class:`HookAborted` (fail-closed).
     """
     try:
         result = hook(ctx)
@@ -282,6 +286,11 @@ def _invoke_hook(
             aborted.source = hook
         raise
     except Exception as error:
+        if on_error == "abort":
+            raise HookAborted(
+                reason=f"{point.value} hook raised {type(error).__name__}: {error}",
+                source=hook,
+            ) from error
         if verbose:
             from crewai_core.printer import PRINTER
 
@@ -299,6 +308,7 @@ def run_hooks(
     *,
     reducer: Reducer | None = None,
     verbose: bool = True,
+    on_error: Literal["ignore", "abort"] = "ignore",
 ) -> Any:
     """Execute an explicit list of hooks against a context.
 
@@ -314,6 +324,8 @@ def run_hooks(
             :func:`_default_reducer` (payload replacement). May raise
             :class:`HookAborted`.
         verbose: Whether to print swallowed-hook-error warnings.
+        on_error: ``"ignore"`` (default) swallows a hook's non-``HookAborted``
+            exception; ``"abort"`` converts it to :class:`HookAborted`.
 
     Returns:
         The (possibly mutated) context.
@@ -334,7 +346,7 @@ def run_hooks(
 
     try:
         for hook in list(hooks):
-            if _invoke_hook(point, hook, ctx, active_reducer, verbose):
+            if _invoke_hook(point, hook, ctx, active_reducer, verbose, on_error):
                 modified = True
         outcome = "modified" if modified else "proceeded"
         return ctx
@@ -360,6 +372,7 @@ def dispatch(
     *,
     reducer: Reducer | None = None,
     verbose: bool = True,
+    on_error: Literal["ignore", "abort"] = "ignore",
 ) -> Any:
     """Dispatch a context to all hooks registered for a point.
 
@@ -369,7 +382,7 @@ def dispatch(
     hooks = _resolve_hooks(point)
     if not hooks:
         return ctx
-    return run_hooks(point, ctx, hooks, reducer=reducer, verbose=verbose)
+    return run_hooks(point, ctx, hooks, reducer=reducer, verbose=verbose, on_error=on_error)
 
 
 def _wrap_with_filters(

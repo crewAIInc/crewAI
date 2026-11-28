@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from crewai_core.printer import PRINTER
 
@@ -42,6 +43,9 @@ class ToolCallHookContext:
             Do NOT replace the dict (e.g., context.tool_input = {}), as this
             will not affect the actual tool execution.
         tool: Reference to the CrewStructuredTool instance
+        tool_call_id: ID of this tool call as returned by the LLM (native
+            tool calls). None on the ReAct path, where the model emits no
+            call ID.
         agent: Agent executing the tool (may be None)
         task: Current task being executed (may be None)
         crew: Crew instance (may be None)
@@ -61,6 +65,7 @@ class ToolCallHookContext:
         crew: Crew | None = None,
         tool_result: str | None = None,
         raw_tool_result: Any | None = None,
+        tool_call_id: str | None = None,
     ) -> None:
         """Initialize tool call hook context.
 
@@ -73,6 +78,8 @@ class ToolCallHookContext:
             crew: Optional crew instance
             tool_result: Optional tool result (for after hooks)
             raw_tool_result: Optional raw tool result (for after hooks)
+            tool_call_id: Optional LLM-assigned ID of this tool call
+                (native path); None on the ReAct path
         """
         self.tool_name = tool_name
         self.tool_input = tool_input
@@ -82,6 +89,7 @@ class ToolCallHookContext:
         self.crew = crew
         self.tool_result = tool_result
         self.raw_tool_result = raw_tool_result
+        self.tool_call_id = tool_call_id
 
     def request_human_input(
         self,
@@ -170,13 +178,41 @@ def _hook_verbose(context: ToolCallHookContext) -> bool:
     return bool(getattr(context.agent, "verbose", False))
 
 
-def run_before_tool_call_hooks(context: ToolCallHookContext) -> bool:
+def _resolve_hook_on_error(
+    context: ToolCallHookContext,
+    on_error: Literal["ignore", "abort"] | None,
+) -> Literal["ignore", "abort"]:
+    """Resolve the hook error mode: an explicit value wins, else the crew's flag.
+
+    A context whose crew sets ``tool_hook_fail_closed=True`` runs its hooks
+    fail-closed; anything else keeps the historical fail-open behavior.
+    """
+    if on_error is not None:
+        return on_error
+    crew = context.crew
+    if crew is not None and bool(getattr(crew, "tool_hook_fail_closed", False)):
+        return "abort"
+    return "ignore"
+
+
+def run_before_tool_call_hooks(
+    context: ToolCallHookContext,
+    *,
+    on_error: Literal["ignore", "abort"] | None = None,
+) -> bool:
     """Run all ``pre_tool_call`` hooks against a context.
 
     Returns:
         True if a hook blocked execution (returned False or raised
         :class:`HookAborted`), False otherwise. Tool input mutations on the
         context persist regardless.
+
+    A hook that raises any other exception is swallowed (fail-open) unless
+    ``on_error="abort"`` -- or the context's crew sets
+    ``tool_hook_fail_closed=True`` -- in which case the exception aborts
+    the call (fail-closed): this function returns True and the caller
+    reports "Tool execution blocked by hook" to the agent instead of
+    running the tool.
     """
     try:
         dispatch(
@@ -184,24 +220,45 @@ def run_before_tool_call_hooks(context: ToolCallHookContext) -> bool:
             context,
             reducer=before_tool_call_reducer,
             verbose=_hook_verbose(context),
+            on_error=_resolve_hook_on_error(context, on_error),
         )
         return False
     except HookAborted:
         return True
 
 
-def run_after_tool_call_hooks(context: ToolCallHookContext) -> str | None:
+def run_after_tool_call_hooks(
+    context: ToolCallHookContext,
+    *,
+    on_error: Literal["ignore", "abort"] | None = None,
+) -> str | None:
     """Run all ``post_tool_call`` hooks against a context.
 
     Returns:
         The (possibly modified) tool result carried on the context.
+
+    A hook that raises any other exception is swallowed (fail-open) unless
+    ``on_error="abort"`` -- or the context's crew sets
+    ``tool_hook_fail_closed=True`` -- in which case the tool result is
+    withheld: a short error string is returned instead, so the agent
+    never sees output that no hook validated.
     """
-    dispatch(
-        InterceptionPoint.POST_TOOL_CALL,
-        context,
-        reducer=after_tool_call_reducer,
-        verbose=_hook_verbose(context),
-    )
+    resolved = _resolve_hook_on_error(context, on_error)
+    try:
+        dispatch(
+            InterceptionPoint.POST_TOOL_CALL,
+            context,
+            reducer=after_tool_call_reducer,
+            verbose=_hook_verbose(context),
+            on_error=resolved,
+        )
+    except HookAborted as aborted:
+        if resolved == "abort":
+            return (
+                "Tool result withheld: an after_tool_call hook failed "
+                f"({aborted.reason})."
+            )
+        raise
     return context.tool_result
 
 

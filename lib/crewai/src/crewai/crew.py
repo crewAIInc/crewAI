@@ -241,6 +241,17 @@ class Crew(FlowTrackable, BaseModel):
             "unless they set a cache_function that prevents caching."
         ),
     )
+    tool_hook_fail_closed: bool = Field(
+        default=False,
+        description=(
+            "Whether a failing tool hook blocks the tool call instead of "
+            "being swallowed (fail-open). When enabled, a before_tool_call "
+            "hook that raises aborts the call and the error is returned to "
+            "the agent, and an after_tool_call hook that raises withholds "
+            "the tool result. Off by default: hook errors are swallowed "
+            "and the tool runs as before."
+        ),
+    )
     tool_failure_policy: ToolFailurePolicy | None = Field(
         default=None,
         description=(
