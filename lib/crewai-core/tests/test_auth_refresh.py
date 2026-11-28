@@ -368,15 +368,19 @@ class TestRefreshFailure:
             ),
             (
                 httpx.Response(400, text="<html>Bad Request</html>"),
-                "HTTP 400 (no error code)",
+                "HTTP 400 (no recognized error code)",
             ),
             (
                 httpx.Response(400, json=["invalid_grant"]),
-                "HTTP 400 (no error code)",
+                "HTTP 400 (no recognized error code)",
             ),
             (
                 httpx.Response(400, json={"error": "refresh-1 is not valid"}),
-                "HTTP 400 (no error code)",
+                "HTTP 400 (no recognized error code)",
+            ),
+            (
+                httpx.Response(400, json={"error": "refresh-1"}),
+                "HTTP 400 (no recognized error code)",
             ),
         ],
         ids=[
@@ -387,6 +391,7 @@ class TestRefreshFailure:
             "non-json",
             "not-an-object",
             "unsafe-error-code",
+            "token-shaped-error-code",
         ],
     )
     def test_a_rejection_other_than_invalid_grant_keeps_the_login(

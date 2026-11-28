@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import re
 import time
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 import webbrowser
@@ -33,21 +32,28 @@ _REFRESH_TIMEOUT_SECONDS = 5
 
 # RFC 6749 section 5.2 limits `error` to printable ASCII; anything else, or anything
 # long, is not echoed into a log line.
-_OAUTH_ERROR_CODE = re.compile(r"[A-Za-z0-9_.\-]{1,64}")
+# RFC 6749 section 5.2. Only these are logged: anything else in `error` is server text, and a
+# refresh token fits any "looks like a code" pattern.
+_OAUTH_ERROR_CODES = (
+    "invalid_request",
+    "invalid_client",
+    "invalid_grant",
+    "unauthorized_client",
+    "unsupported_grant_type",
+    "invalid_scope",
+)
 
 TOauth2Settings = TypeVar("TOauth2Settings", bound="Oauth2Settings")
 
 
 def _oauth_error_code(response: httpx.Response) -> str | None:
-    """Return the RFC 6749 section 5.2 `error` of a token-endpoint reply, if readable."""
+    """Return the RFC 6749 section 5.2 `error` of a token-endpoint reply, if it is a standard one."""
     try:
         body = response.json()
     except ValueError:
         return None
     error = body.get("error") if isinstance(body, dict) else None
-    if isinstance(error, str) and _OAUTH_ERROR_CODE.fullmatch(error):
-        return error
-    return None
+    return next((code for code in _OAUTH_ERROR_CODES if code == error), None)
 
 
 class Oauth2Settings(BaseModel):
@@ -273,7 +279,7 @@ class AuthenticationCommand:
                         "Could not renew the saved CrewAI login: the login provider "
                         "answered HTTP %s (%s). The login is kept.",
                         response.status_code,
-                        error or "no error code",
+                        error or "no recognized error code",
                     )
                 return None
             if response.status_code != 200:
