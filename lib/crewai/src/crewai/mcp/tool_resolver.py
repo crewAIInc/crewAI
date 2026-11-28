@@ -669,23 +669,32 @@ class MCPToolResolver:
                     session.initialize(), timeout=MCP_CONNECTION_TIMEOUT
                 )
 
-                tools_result = await asyncio.wait_for(
-                    session.list_tools(),
-                    timeout=MCP_DISCOVERY_TIMEOUT - MCP_CONNECTION_TIMEOUT,
-                )
-
                 schemas = {}
-                for tool in tools_result.tools:
-                    args_schema = None
-                    if hasattr(tool, "inputSchema") and tool.inputSchema:
-                        args_schema = self._json_schema_to_pydantic(
-                            sanitize_tool_name(tool.name), tool.inputSchema
-                        )
+                # Follow pagination: keep requesting with the returned
+                # nextCursor until the server omits it, so tools on later
+                # pages are discovered too.
+                cursor: str | None = None
+                while True:
+                    tools_result = await asyncio.wait_for(
+                        session.list_tools(cursor=cursor),
+                        timeout=MCP_DISCOVERY_TIMEOUT - MCP_CONNECTION_TIMEOUT,
+                    )
 
-                    schemas[sanitize_tool_name(tool.name)] = {
-                        "description": getattr(tool, "description", ""),
-                        "args_schema": args_schema,
-                    }
+                    for tool in tools_result.tools:
+                        args_schema = None
+                        if hasattr(tool, "inputSchema") and tool.inputSchema:
+                            args_schema = self._json_schema_to_pydantic(
+                                sanitize_tool_name(tool.name), tool.inputSchema
+                            )
+
+                        schemas[sanitize_tool_name(tool.name)] = {
+                            "description": getattr(tool, "description", ""),
+                            "args_schema": args_schema,
+                        }
+
+                    cursor = getattr(tools_result, "nextCursor", None)
+                    if not cursor:
+                        break
                 return schemas
 
     @staticmethod
