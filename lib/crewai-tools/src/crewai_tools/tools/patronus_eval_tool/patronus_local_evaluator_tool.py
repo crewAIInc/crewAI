@@ -48,7 +48,11 @@ class PatronusLocalEvaluatorTool(BaseTool):
         evaluated_model_gold_answer: str = "",
         **kwargs: Any,
     ):
-        super().__init__(**kwargs)
+        super().__init__(
+            evaluator=evaluator,
+            evaluated_model_gold_answer=evaluated_model_gold_answer,
+            **kwargs,
+        )
         self.evaluator = evaluator
         self.evaluated_model_gold_answer = evaluated_model_gold_answer
         self._initialize_patronus(patronus_client)
