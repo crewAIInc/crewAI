@@ -1,0 +1,64 @@
+---
+title: AlterLab Web Scraping
+description: As ferramentas AlterLab fazem scrape, busca e crawl de sites, incluindo páginas com muito JavaScript e proteção anti-bot, por meio da API do AlterLab.
+icon: spider-web
+mode: "wide"
+---
+
+# `AlterLabScrapeTool`, `AlterLabSearchTool`, `AlterLabCrawlTool`
+
+## Descrição
+
+O [AlterLab](https://alterlab.io) é uma API de web scraping com tratamento anti-bot e renderização de JavaScript. Ele retorna markdown pronto para LLMs e escolhe o nível de scraping de menor custo capaz de buscar cada página. O CrewAI inclui três ferramentas para ele:
+
+| Tool | O que faz |
+|:-----|:-----|
+| `AlterLabScrapeTool` | Busca uma URL e retorna o conteúdo em markdown. |
+| `AlterLabSearchTool` | Executa uma busca na web e retorna títulos, URLs e trechos. |
+| `AlterLabCrawlTool` | Faz crawl de um site a partir de uma URL inicial e retorna o markdown de cada página. |
+
+## Configuração
+
+As ferramentas chamam diretamente a API REST do AlterLab e não precisam de pacote adicional. Crie uma chave de API no [painel do AlterLab](https://alterlab.io) e defina-a como `ALTERLAB_API_KEY`:
+
+```shell
+export ALTERLAB_API_KEY="your-api-key"
+```
+
+## Exemplo
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import AlterLabScrapeTool, AlterLabSearchTool
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Find and summarize information from the web",
+    backstory="An analyst who reads sources before answering.",
+    tools=[AlterLabSearchTool(num_results=5), AlterLabScrapeTool()],
+)
+
+task = Task(
+    description="Find recent articles about web scraping APIs and summarize the top one.",
+    expected_output="A short summary with the source URL.",
+    agent=researcher,
+)
+
+Crew(agents=[researcher], tasks=[task]).kickoff()
+```
+
+## Argumentos
+
+| Argumento | Tipo | Descrição |
+|:---------|:-----|:------------|
+| **api_key** | `string` | Chave de API do AlterLab. Por padrão, usa a variável de ambiente `ALTERLAB_API_KEY`. |
+| **base_url** | `string` | URL base da API. Padrão: `https://api.alterlab.io`. |
+| **scrape_params** | `object` | Apenas a ferramenta de scrape. Campos extras da requisição, como `{"mode": "js"}`. Padrão: `{"formats": ["markdown"]}`. |
+| **num_results** | `int` | Apenas a ferramenta de busca. Número de resultados, de 1 a 30. Padrão: `10`. |
+| **search_params** | `object` | Apenas a ferramenta de busca. Campos extras, como `{"country": "us", "time_range": "week"}`. |
+| **max_pages**, **max_depth** | `int` | Apenas a ferramenta de crawl. Limites de páginas e de profundidade de links. Padrão: `10` e `2`. |
+| **crawl_params** | `object` | Apenas a ferramenta de crawl. Campos extras, como `{"include_patterns": ["/docs/*"]}`. |
+
+<Note>
+A extração baseada em LLM (`extraction_prompt` ou `extraction_schema` em `scrape_params`) exige a sua própria chave de provedor de LLM (OpenAI, Anthropic, OpenRouter e outros) cadastrada na sua conta do AlterLab. O AlterLab não fornece uso de LLM pago pela plataforma. Scrape, busca e crawl não precisam de chave.
+</Note>

@@ -1,0 +1,64 @@
+---
+title: AlterLab 웹 스크래핑
+description: AlterLab 도구는 AlterLab API를 통해 JavaScript가 많거나 봇 차단이 적용된 페이지를 포함한 웹사이트를 스크랩, 검색, 크롤링합니다.
+icon: spider-web
+mode: "wide"
+---
+
+# `AlterLabScrapeTool`, `AlterLabSearchTool`, `AlterLabCrawlTool`
+
+## 설명
+
+[AlterLab](https://alterlab.io)은 봇 차단 대응과 JavaScript 렌더링을 지원하는 웹 스크래핑 API입니다. LLM에 바로 쓸 수 있는 마크다운을 반환하며, 각 페이지를 가져올 수 있는 가장 저렴한 스크래핑 단계를 자동으로 선택합니다. CrewAI는 다음 세 가지 도구를 제공합니다.
+
+| Tool | 기능 |
+|:-----|:-----|
+| `AlterLabScrapeTool` | URL 하나를 가져와 콘텐츠를 마크다운으로 반환합니다. |
+| `AlterLabSearchTool` | 웹 검색을 실행하고 제목, URL, 스니펫을 반환합니다. |
+| `AlterLabCrawlTool` | 시작 URL부터 사이트를 크롤링하고 각 페이지의 마크다운을 반환합니다. |
+
+## 설정
+
+이 도구는 AlterLab REST API를 직접 호출하므로 추가 패키지가 필요하지 않습니다. [AlterLab 대시보드](https://alterlab.io)에서 API 키를 만들고 `ALTERLAB_API_KEY`로 설정하세요.
+
+```shell
+export ALTERLAB_API_KEY="your-api-key"
+```
+
+## 예제
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import AlterLabScrapeTool, AlterLabSearchTool
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Find and summarize information from the web",
+    backstory="An analyst who reads sources before answering.",
+    tools=[AlterLabSearchTool(num_results=5), AlterLabScrapeTool()],
+)
+
+task = Task(
+    description="Find recent articles about web scraping APIs and summarize the top one.",
+    expected_output="A short summary with the source URL.",
+    agent=researcher,
+)
+
+Crew(agents=[researcher], tasks=[task]).kickoff()
+```
+
+## 인수
+
+| 인수 | 타입 | 설명 |
+|:---------|:-----|:------------|
+| **api_key** | `string` | AlterLab API 키. 기본값은 `ALTERLAB_API_KEY` 환경 변수입니다. |
+| **base_url** | `string` | API 기본 URL. 기본값은 `https://api.alterlab.io`입니다. |
+| **scrape_params** | `object` | 스크랩 도구 전용. `{"mode": "js"}`와 같은 추가 요청 필드. 기본값은 `{"formats": ["markdown"]}`입니다. |
+| **num_results** | `int` | 검색 도구 전용. 결과 수(1~30). 기본값은 `10`입니다. |
+| **search_params** | `object` | 검색 도구 전용. `{"country": "us", "time_range": "week"}`와 같은 추가 필드. |
+| **max_pages**, **max_depth** | `int` | 크롤 도구 전용. 페이지 수와 링크 깊이 제한. 기본값은 `10`과 `2`입니다. |
+| **crawl_params** | `object` | 크롤 도구 전용. `{"include_patterns": ["/docs/*"]}`와 같은 추가 필드. |
+
+<Note>
+LLM 기반 추출(`scrape_params`의 `extraction_prompt` 또는 `extraction_schema`)에는 AlterLab 계정에 등록한 본인의 LLM 제공업체 키(OpenAI, Anthropic, OpenRouter 등)가 필요합니다. AlterLab은 플랫폼 부담의 LLM 사용을 제공하지 않습니다. 스크랩, 검색, 크롤링에는 키가 필요하지 않습니다.
+</Note>
