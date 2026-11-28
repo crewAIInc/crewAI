@@ -22,7 +22,7 @@ multimodal content parts. Never `str()` it — that puts a Python repr
 Collapse a message to text with the helper instead:
 
 ```python
-from crewai.utilities.agent_utils import message_content_text
+from crewai.utilities.message_utils import message_content_text
 
 text = message_content_text(msg)  # "" for None; joined text for a parts list
 ```
