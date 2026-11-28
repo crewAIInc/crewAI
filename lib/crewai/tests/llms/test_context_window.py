@@ -9,10 +9,12 @@ from crewai.llms.context_window import (
     ANTHROPIC_CONTEXT_WINDOWS,
     BEDROCK_CONTEXT_WINDOWS,
     GEMINI_CONTEXT_WINDOWS,
+    OPENAI_CONTEXT_WINDOWS,
     CONTEXT_WINDOW_USAGE_RATIO,
     DEFAULT_CONTEXT_WINDOW_SIZE,
     LLM_CONTEXT_WINDOW_SIZES,
     bare_context_windows,
+    bare_model_name,
     context_windows_from_catalog,
     _chunk_messages,
     summarize_messages,
@@ -783,3 +785,29 @@ def test_explicit_context_window_size_is_honored_from_an_llm_config_dict() -> No
 
     assert llm is not None
     assert llm.get_context_window_size() == USABLE_ONE_MILLION
+
+
+@pytest.mark.parametrize(
+    ("model", "raw_context_window"),
+    [
+        ("ft:gpt-4o-2024-08-06:my-org:my-model:abc123", 128_000),
+        ("ft:gpt-4o-mini-2024-07-18:my-org::abc123", 128_000),
+        ("ft:gpt-3.5-turbo-1106:personal:run:xyz789", 16_385),
+    ],
+)
+def test_fine_tuned_model_ids_keep_their_base_model_window(
+    model: str, raw_context_window: int
+) -> None:
+    """An ft:<model>:<org>:<name>:<job> id resolves to the base model's window.
+
+    Previously every fine-tuned id collapsed to the bare name "ft" and
+    inherited an unrelated window (13,927 usable tokens for a 128k model).
+    """
+    assert resolve_context_window_size(
+        model, OPENAI_CONTEXT_WINDOWS, default=DEFAULT_CONTEXT_WINDOW_SIZE
+    ) == int(raw_context_window * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_bare_model_name_keeps_the_fine_tuned_family() -> None:
+    assert bare_model_name("ft:gpt-4o-2024-08-06:my-org:my-model:abc123") == "ft:gpt-4o"
+    assert bare_model_name("ft:gpt-4o-mini-2024-07-18:my-org::abc123") == "ft:gpt-4o-mini"

@@ -192,7 +192,11 @@ def bare_model_name(name: str) -> str:
     name = _DATE_IN_MODEL_ID.sub("", name)
     while True:
         stem, separator, segment = name.rpartition(":")
-        if not separator or not segment:
+        # Bedrock-style invocation suffixes (":0" in "v1:0") are stripped,
+        # but an OpenAI fine-tuned id ("ft:<model>:<org>:<name>:<job>") must
+        # keep its "ft:<model>" family, or every fine-tuned model collapses
+        # into a single "ft" bucket and inherits an unrelated window size.
+        if not separator or stem == "ft":
             break
         name = stem
     version = _TRAILING_VERSION.fullmatch(name)
