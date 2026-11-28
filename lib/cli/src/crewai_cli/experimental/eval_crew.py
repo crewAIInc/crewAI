@@ -57,6 +57,7 @@ import click
 from crewai_core.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai_core.plus_api import restore_machine_transport
 from crewai_core.settings import Settings
+from crewai_core.token_manager import TokenManager
 from dotenv import dotenv_values, set_key
 import httpx
 from rich.console import Console
@@ -238,25 +239,25 @@ RUNNING_THE_CREW: dict[RunReason, str] = {
     ),
     "run_again": "That run was not traced: running the crew again to evaluate it.",
 }
-# Said before the consent question, at a terminal: it asks about a trace before
-# there is a run, so the person reads first why `crewai eval` needs one.
+# Said before the consent question, at a terminal and logged out: it asks about
+# a run that has not happened yet, so the person reads first what it is for.
 BEFORE_ASKING: dict[RunReason, str] = {
     "no_traced_run": (
-        "No traced run of this crew yet. To evaluate it, the crew runs now and its "
-        "trace goes to CrewAI AMP, which grades it."
+        "Your agentic system runs once and CrewAI AMP grades it, "
+        "then shows you what to fix."
     ),
     "project_changed": (
-        "The project changed since its last traced run. To evaluate what it does "
-        "now, the crew runs again and its trace goes to CrewAI AMP, which grades it."
+        "The project changed since its last traced run. Your agentic system runs "
+        "once more and CrewAI AMP grades it, then shows you what to fix."
     ),
     "run_again": (
-        "That run was not traced. To evaluate it, the crew runs again and its trace "
-        "goes to CrewAI AMP, which grades it."
+        "Your agentic system runs once more and CrewAI AMP grades it, "
+        "then shows you what to fix."
     ),
 }
 # The person asked for the evaluation, so Enter means yes, as for a project that
 # turned tracing off. There is no timeout: an unanswered question sends nothing.
-SHARE_TO_EVALUATE_QUESTION = "Run the crew and share its trace?"
+SHARE_TO_EVALUATE_QUESTION = "Get a score for this run?"
 TRACING_NOW_ON = (
     "Tracing is now on for this project: its runs' traces are sent to CrewAI AMP, "
     "which grades them."
@@ -275,9 +276,7 @@ TRACING_OFF_UNATTENDED = (
 )
 TRACING_STAYS_OFF = "Nothing was run: tracing stays off for this project."
 TRACING_IS_ON = "Tracing is on for this project — its runs are traced to CrewAI AMP."
-NOT_SHARED = (
-    "Nothing was run: evaluating a run needs its trace, and no trace was shared."
-)
+NOT_SHARED = "Nothing was run"
 UNTRUSTED_AMP = (
     "The crew was not run: its trace would go to {url}, an AMP this machine is not "
     "set up to trust with its CrewAI login. Set that AMP up (`crewai enterprise "
@@ -1074,6 +1073,79 @@ def untrusted_amp_stop(trusted: set[str]) -> str | None:
     return UNTRUSTED_AMP.format(url=PlusAPI().base_url.rstrip("/"))
 
 
+def logged_in_to_trusted_amp(trusted: set[str]) -> bool:
+    """Is this machine logged in (a saved `crewai login` that has not expired)
+    to the AMP the run traces to, one TRUSTED with that login?
+
+    Read on this machine alone, so the run app can decide at once whether to
+    ask. A login that cannot be read is not one: the person is asked, and the
+    evaluation says why it cannot use it (`saved_login`). Before the question
+    is skipped, `crewai eval` also asks AMP (`_amp_accepts_the_login`).
+
+    Only this account's own login counts (`_login_is_this_accounts`): by now
+    the project's `.env` is in the environment, and it can point the login
+    store somewhere else."""
+    if untrusted_amp_stop(trusted) is not None or not _login_is_this_accounts():
+        return False
+    try:
+        return saved_login() is not None
+    except EvaluationStoppedError:
+        return False
+
+
+def _login_is_this_accounts() -> bool:
+    """Is the login store `saved_login` reads this account's own?
+
+    `TokenManager` finds it from `HOME` (`LOCALAPPDATA` on Windows), which a
+    project's `.env` can set — and a store the project ships holds someone
+    else's valid login, under which the run's trace would go to their
+    organization. A store anywhere but the account's own is no consent."""
+    own = _account_credentials_dir()
+    return own is not None and os.path.realpath(
+        TokenManager._get_secure_storage_path()
+    ) == os.path.realpath(own)
+
+
+def _account_credentials_dir() -> Path | None:
+    """Where `crewai login` saves for this account, found as
+    `crewai_core.eval_handshake` finds its folder: from the account's home in
+    the account database (on Windows, the known-folder API), never from the
+    environment. None when the account database has no home for this user.
+
+    Mirrors `TokenManager._get_secure_storage_path`'s layout: should the two
+    drift, every login reads as foreign and the person is asked."""
+    if sys.platform == "win32":
+        import appdirs
+
+        return Path(appdirs.user_data_dir()) / "crewai" / "credentials"
+    try:
+        import pwd
+
+        home = Path(pwd.getpwuid(os.getuid()).pw_dir)
+    except (ImportError, KeyError, OSError):
+        return None
+    base = (
+        home / "Library" / "Application Support"
+        if sys.platform == "darwin"
+        else home / ".local" / "share"
+    )
+    return base / "crewai" / "credentials"
+
+
+def _amp_accepts_the_login() -> bool:
+    """Does the AMP the run traces to take the saved login right now?
+
+    A login that has not expired here can still be one AMP refuses (401 "User
+    not found"). The run's trace would then go up anonymously — the tracing
+    falls back to an ephemeral batch — not to the login's organization, so
+    that login is nobody's yes: the person is asked. No answer, or any answer
+    but 200, reads as a refusal."""
+    try:
+        return PlusAPI(api_key=saved_login()).get_organizations().status_code == 200
+    except (EvaluationStoppedError, httpx.HTTPError):
+        return False
+
+
 def tracing_already_on() -> bool:
     """Did somebody turn tracing on already — `CREWAI_TRACING_ENABLED=true`, or
     the consent a person gave once? A crew that sets `tracing=True` in code is
@@ -1174,9 +1246,9 @@ def _at_a_terminal() -> bool:
 
 
 def _ask_before_the_first_enable(why: RunReason) -> None:
-    """Nobody turned tracing on yet, and a person is here: say why the crew
-    runs, then ask before turning tracing on. Enter means yes; a no runs
-    nothing."""
+    """Nobody turned tracing on yet, and a person who is not logged in (or
+    whose login AMP refuses) is here: say why the crew runs, then ask before
+    turning tracing on. Enter means yes; a no runs nothing."""
     console.print(Text(BEFORE_ASKING[why]), style="bold")
     if not click.confirm(SHARE_TO_EVALUATE_QUESTION, default=True):
         record_stop("declined")
@@ -1213,7 +1285,10 @@ def _run_the_crew_to_evaluate(
 
     Running `crewai eval` asked for the run to be graded, and the grade is read
     off its trace; the only question is the first enable of tracing, put to a
-    person at a terminal (`_ask_before_the_first_enable`). The run app
+    person at a terminal who is not logged in, or whose login AMP refuses
+    (`_ask_before_the_first_enable`).
+    A project that turned tracing off is asked whether to turn it back on,
+    logged in or not (`_ask_to_turn_tracing_on`). The run app
     evaluates what it ran, on its own screen, so this returns no run when it
     did — the reader has already seen the link and the verdict. It returns the
     run to grade when no app got to it, with the exit the run failed with, if
@@ -1241,19 +1316,27 @@ def _run_the_crew_to_evaluate(
         _fail(stop)
     if tracing_turned_off():
         _ask_to_turn_tracing_on()
-    # Nobody turned tracing on. At a terminal the person is asked first
-    # (Enter means yes); with nobody there (a coding agent, a
-    # script) the yes is inferred from this command and tracing is turned on
-    # for the project — said once, plainly, here and in the run app. From
-    # then on the project traces, and nothing more is asked or said.
+    # Nobody turned tracing on. Logged out at a terminal, the person is asked
+    # first (Enter means yes), and so is one whose login AMP refuses. Logged
+    # in, or with nobody there (a coding agent, a script), the yes is inferred
+    # from this command and tracing is turned on for the project — said once,
+    # plainly, here and in the run app. From then on the project traces, and
+    # nothing more is asked or said.
     turned_on_now = asked = False
     if not tracing_already_on():
-        if _at_a_terminal():
-            _ask_before_the_first_enable(why)
-            asked = True
-        else:
+        if not _at_a_terminal():
             turn_tracing_on()
             turned_on_now = True
+        elif logged_in_to_trusted_amp(trusted or set()) and _amp_accepts_the_login():
+            # Counted apart from the unattended yes: it is the question a
+            # login answers, and without it a skipped question reads as a
+            # project that traced already.
+            _count_usage("cli_usage:eval_consent:logged_in")
+            turn_tracing_on()
+            turned_on_now = True
+        else:
+            _ask_before_the_first_enable(why)
+            asked = True
     _count_usage(f"cli_usage:eval_ran_crew:{why}")
     if not asked:  # the line before the consent screen already said why
         said = (

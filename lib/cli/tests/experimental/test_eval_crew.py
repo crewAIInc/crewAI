@@ -10,6 +10,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 import uuid
 from pathlib import Path
 from types import SimpleNamespace
@@ -21,6 +22,7 @@ import pytest
 from rich.console import Console
 
 from crewai_cli import run_crew as run_crew_module
+from crewai_core.token_manager import TokenManager
 from crewai_cli.experimental import eval_crew as eval_module
 from crewai_cli.cli import eval_command
 
@@ -97,6 +99,16 @@ class FakeAMP:
         self.sent_config = None
         self.api_key = None
         self.headers: dict[str, str] = {"X-Crewai-Organization-Id": "org-42"}
+        # What AMP says of the saved login before a question is skipped, and
+        # which login and AMP each check was sent with.
+        self.login_answer: httpx.Response | Exception = httpx.Response(200, json=[])
+        self.login_checks: list[tuple[str | None, str]] = []
+
+    def get_organizations(self):
+        self.login_checks.append((self.api_key, self.base_url))
+        if isinstance(self.login_answer, Exception):
+            raise self.login_answer
+        return self.login_answer
 
     def create_evaluation(self, execution_id, *, eval_config=None, project_id=None):
         self.calls.append(("create", execution_id))
@@ -121,12 +133,25 @@ def done(gate="passed", grades=None, eval_config=None):
     return httpx.Response(200, json=payload)
 
 
+def _the_login_store_is_this_accounts(tmp_path: Path, monkeypatch) -> Path:
+    """The `crewai login` store, and the account's own, are one folder of this
+    test's (hidden, and made only by a test that saves a login there): a saved
+    login counts as this account's."""
+    from crewai_core.token_manager import TokenManager
+
+    store = tmp_path / ".credentials"
+    monkeypatch.setattr(TokenManager, "_get_secure_storage_path", staticmethod(lambda: store))
+    monkeypatch.setattr(eval_module, "_account_credentials_dir", lambda: store)
+    return store
+
+
 @pytest.fixture
 def project(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(eval_module, "console", Console(width=240))  # one sentence per line in the captured output
     monkeypatch.setattr(eval_module, "get_or_create_project_id", lambda: None)
     monkeypatch.setattr(eval_module, "saved_login", lambda: "login-token")
+    _the_login_store_is_this_accounts(tmp_path, monkeypatch)
     monkeypatch.setattr(eval_module.time, "sleep", lambda seconds: None)
     monkeypatch.setattr(eval_module, "is_dmn_mode_enabled", lambda: False)
     # This machine is logged in to https://amp.test (`crewai enterprise configure`).
@@ -2882,7 +2907,11 @@ def test_a_start_the_run_app_was_refused_is_not_tried_again_by_the_command(
     eval_module.eval_crew()
 
     assert [call for call in amp.calls if call[0] == "create"] == [("create", EXECUTION_ID)]
-    assert usage == ["cli_usage:eval_ran_crew:no_traced_run", "cli_usage:eval_stopped:amp_401"]
+    assert usage == [
+        "cli_usage:eval_consent:logged_in",  # logged in at a terminal: not asked
+        "cli_usage:eval_ran_crew:no_traced_run",
+        "cli_usage:eval_stopped:amp_401",
+    ]
     assert len(shown) == 1
 
 
@@ -2932,6 +2961,7 @@ def test_a_run_that_left_no_trace_counts_as_untraced_once(
     (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
     monkeypatch.setattr(run_crew_module, "run_crew", lambda: None)
+    install(monkeypatch, FakeAMP())  # AMP takes the saved login
 
     @contextlib.contextmanager
     def watched(**_decided):
@@ -2948,6 +2978,7 @@ def test_a_run_that_left_no_trace_counts_as_untraced_once(
         eval_module.eval_crew()
 
     assert usage == [
+        "cli_usage:eval_consent:logged_in",  # logged in at a terminal: not asked
         "cli_usage:eval_ran_crew:no_traced_run",
         "cli_usage:eval_stopped:untraced_after_run",
     ]
@@ -3705,11 +3736,12 @@ def test_tracing_is_turned_on_and_said_once_only_when_nobody_had(
 def test_at_a_terminal_tracing_is_turned_on_only_after_the_consent_screen(
     project, monkeypatch, capsys, usage, consent_screen, answer
 ):
-    """A person at the terminal is asked first, with Enter meaning yes; a yes
-    turns tracing on for the project and runs the crew, a no runs nothing. A
-    project that traces already is not asked."""
+    """A person at the terminal who is not logged in is asked first, with Enter
+    meaning yes; a yes turns tracing on for the project and runs the crew, a no
+    runs nothing. A project that traces already is not asked."""
     directory, _ = project
     (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module, "saved_login", lambda: None)
     if answer == "already on":
         (directory / ".env").write_text("CREWAI_TRACING_ENABLED=true\n")
     monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
@@ -3736,7 +3768,11 @@ def test_at_a_terminal_tracing_is_turned_on_only_after_the_consent_screen(
 
     assert consent_screen.asked == ([] if answer == "already on" else [{"default": True}])
     assert "Tracing is now on" not in out  # nothing inferred: they were asked, or had said
-    why = "No traced run of this crew yet. To evaluate it, the crew runs now and its trace goes to CrewAI AMP, which grades it."
+    why = (
+        "Your agentic system runs once and CrewAI AMP grades it, then shows you what "
+        "to fix."
+    )
+    assert "The run's trace is sent to CrewAI AMP." not in out
     if answer == "already on":
         assert why not in out
         assert "No traced run of this crew yet: running it now to evaluate it." in out
@@ -3747,7 +3783,7 @@ def test_at_a_terminal_tracing_is_turned_on_only_after_the_consent_screen(
     if answer == "no":
         assert ran == [] and amp.calls == []
         assert not (directory / ".env").exists()
-        assert "Nothing was run: evaluating a run needs its trace, and no trace was shared." in out
+        assert "Nothing was run" in out
         assert usage == ["cli_usage:eval_stopped:declined"]
     else:
         assert ran == [("true", False)]
@@ -3769,9 +3805,11 @@ def test_at_a_terminal_enter_shares_the_trace_and_only_a_no_runs_nothing(
 ):
     """The person asked for the evaluation, so pressing Enter shares the trace
     and runs the crew; only an explicit no runs nothing. The question waits for
-    a key: it never times out into either answer."""
+    a key: it never times out into either answer. Logged out: logged in, the
+    command itself is the yes."""
     directory, _ = project
     (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module, "saved_login", lambda: None)
     monkeypatch.setattr(eval_module.click, "confirm", REAL_CONFIRM)
     monkeypatch.setattr(eval_module.sys, "stdin", _Keyboard(typed))
     monkeypatch.setattr(
@@ -3795,7 +3833,10 @@ def test_at_a_terminal_enter_shares_the_trace_and_only_a_no_runs_nothing(
         assert exited.value.code == 0
     out = " ".join(capsys.readouterr().out.split())
 
-    assert "Run the crew and share its trace? [Y/n]" in out
+    assert out.index(
+        "Your agentic system runs once and CrewAI AMP grades it, then shows you what to fix."
+    ) < out.index("Get a score for this run? [Y/n]")
+    assert "The run's trace is sent to CrewAI AMP." not in out
     if shared:
         assert ran == ["true"] and amp.calls[0] == ("create", "the-new-run")
         assert "CREWAI_TRACING_ENABLED=true" in (directory / ".env").read_text()
@@ -3803,8 +3844,363 @@ def test_at_a_terminal_enter_shares_the_trace_and_only_a_no_runs_nothing(
     else:
         assert ran == [] and amp.calls == []
         assert not (directory / ".env").exists()
-        assert "Nothing was run: evaluating a run needs its trace, and no trace was shared." in out
+        assert "Nothing was run" in out
         assert usage == ["cli_usage:eval_stopped:declined"]
+
+
+# ── logged in, asking for the evaluation is the consent ─────────────────────
+
+
+def _a_project_that_never_traced(directory: Path, monkeypatch) -> list[tuple[str, object]]:
+    """A project with nothing traced and tracing never turned on, run from a
+    terminal. Each crew run is recorded with the tracing setting it saw and
+    whether its run app was told this evaluation turned tracing on."""
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    # no consent given once on this machine: only the project's setting counts
+    monkeypatch.setattr(
+        "crewai_core.user_data.is_tracing_enabled",
+        lambda: os.environ.get("CREWAI_TRACING_ENABLED") == "true",
+    )
+    ran: list[tuple[str, object]] = []
+
+    def fake_run_crew() -> None:
+        from crewai_core.eval_handshake import awaited_evaluation
+
+        said = awaited_evaluation() or {}
+        ran.append((os.environ.get("CREWAI_TRACING_ENABLED", ""), said.get("tracing_turned_on")))
+        record_last_run(directory, "the-new-run", recorded_at=_now())
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    return ran
+
+
+@pytest.fixture
+def login_on_disk(tmp_path, monkeypatch):
+    """The real `crewai login` store, kept in this test's own (hidden) folder:
+    what `saved_login` reads is what was saved, expiry included."""
+    from crewai_core.token_manager import TokenManager
+
+    _the_login_store_is_this_accounts(tmp_path, monkeypatch).mkdir(exist_ok=True)
+    monkeypatch.setattr(eval_module, "saved_login", _REAL_SAVED_LOGIN)
+
+    def save(expires_in_seconds: float) -> None:
+        TokenManager().save_tokens("saved-token", int(time.time() + expires_in_seconds))
+
+    return save
+
+
+@pytest.mark.parametrize(
+    ("run_again", "why"),
+    [(False, "no_traced_run"), (True, "run_again")],
+    ids=["crewai eval", "the run app's Evaluate"],
+)
+def test_logged_in_at_a_terminal_the_crew_runs_traced_without_a_question(
+    project, monkeypatch, capsys, usage, consent_screen, run_again, why
+):
+    """Logged in to the AMP the run traces to, asking for the evaluation is the
+    consent: nothing is asked, tracing is turned on for the project, one line
+    says so (and the run app it opens says where the trace goes), and the run
+    is graded under the login."""
+    directory, _ = project  # logged in: the fixture's saved login
+    ran = _a_project_that_never_traced(directory, monkeypatch)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew(run_again=run_again)
+    out = " ".join(capsys.readouterr().out.split())
+
+    assert consent_screen.asked == []
+    assert ran == [("true", True)]
+    assert "CREWAI_TRACING_ENABLED=true" in (directory / ".env").read_text()
+    assert f"{eval_module.RUNNING_THE_CREW[why]} {eval_module.TRACING_NOW_ON}" in out
+    assert eval_module.BEFORE_ASKING[why] not in out
+    assert amp.login_checks == [("login-token", "https://amp.test")]  # AMP took it first
+    assert amp.calls[0] == ("create", "the-new-run") and amp.api_key == "login-token"
+    assert usage[:2] == ["cli_usage:eval_consent:logged_in", f"cli_usage:eval_ran_crew:{why}"]
+    assert "cli_usage:eval_stopped:declined" not in usage
+
+
+@pytest.mark.parametrize(("expires_in", "asked"), [(-60, True), (3600, False)], ids=["expired", "live"])
+def test_an_expired_login_is_no_login_and_the_person_is_asked(
+    project, monkeypatch, usage, consent_screen, login_on_disk, expires_in, asked
+):
+    """A `crewai login` lasts hours, with no refresh: once it expired, the
+    person is logged out, and asked as anyone logged out is."""
+    directory, _ = project
+    login_on_disk(expires_in)
+    ran = _a_project_that_never_traced(directory, monkeypatch)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert consent_screen.asked == ([{"default": True}] if asked else [])
+    assert ran == [("true", not asked)]  # the run app says it only when nobody was asked
+    assert ("cli_usage:eval_consent:logged_in" in usage) is (not asked)
+    assert amp.api_key == (None if asked else "saved-token")
+
+
+@pytest.mark.parametrize(
+    "login_answer",
+    [
+        httpx.Response(401, json={"error": "Bad credentials - User not found"}),
+        httpx.Response(403),
+        httpx.Response(502),
+        httpx.ConnectError("unreachable"),
+    ],
+    ids=["401 user not found", "403", "502", "unreachable"],
+)
+def test_a_login_amp_refuses_is_no_consent_and_the_person_is_asked(
+    project, monkeypatch, capsys, usage, consent_screen, login_answer
+):
+    """A login that has not expired here but that AMP refuses would send the
+    run's trace up anonymously, not to the login's organization: the person
+    is asked, as one logged out is, and a no runs and turns on nothing. So is
+    one whose AMP did not answer."""
+    directory, _ = project  # logged in on this machine: the fixture's saved login
+    ran = _a_project_that_never_traced(directory, monkeypatch)
+    amp = FakeAMP(statuses=[done()])
+    amp.login_answer = login_answer
+    install(monkeypatch, amp)
+    consent_screen.answer["yes"] = False
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+    out = " ".join(capsys.readouterr().out.split())
+
+    assert exited.value.code == 0
+    assert amp.login_checks == [("login-token", "https://amp.test")]
+    assert consent_screen.asked == [{"default": True}]
+    assert eval_module.BEFORE_ASKING["no_traced_run"] in out
+    assert eval_module.TRACING_NOW_ON not in out
+    assert ran == [] and amp.calls == []
+    assert not (directory / ".env").exists()
+    assert usage == ["cli_usage:eval_stopped:declined"]
+
+
+def test_a_login_amp_refuses_and_a_yes_runs_the_crew_as_logged_out(
+    project, monkeypatch, usage, consent_screen
+):
+    """The yes is the person's, so the run app is not told this command turned
+    tracing on, and the skipped-question count stays at zero."""
+    directory, _ = project
+    ran = _a_project_that_never_traced(directory, monkeypatch)
+    amp = FakeAMP(statuses=[done()])
+    amp.login_answer = httpx.Response(401, json={"error": "Bad credentials - User not found"})
+    install(monkeypatch, amp)
+
+    eval_module.eval_crew()
+
+    assert consent_screen.asked == [{"default": True}]
+    assert ran == [("true", False)]
+    assert "cli_usage:eval_consent:logged_in" not in usage
+
+
+def test_amp_is_not_asked_about_a_login_when_nobody_is_at_the_terminal(
+    project, monkeypatch, usage
+):
+    """With no terminal the command is the yes whatever the login: nothing is
+    asked, of the person or of AMP."""
+    directory, _ = project
+    ran = _a_project_that_never_traced(directory, monkeypatch)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.login_checks == []
+    assert ran == [("true", True)]
+    assert "cli_usage:eval_consent:logged_in" not in usage
+
+
+def test_an_unreadable_login_is_no_consent_and_the_person_is_asked(
+    project, monkeypatch, usage, consent_screen
+):
+    """A saved login that cannot be read is not a login to stand in for the
+    question: the person is asked, and the evaluation then stops on the login,
+    saying why, as it always did."""
+    directory, _ = project
+    ran = _a_project_that_never_traced(directory, monkeypatch)
+    monkeypatch.setattr(eval_module, "saved_login", _REAL_SAVED_LOGIN)
+
+    def broken_store():
+        raise OSError("permission denied")
+
+    monkeypatch.setattr(eval_module, "get_auth_token", broken_store)
+    install(monkeypatch, FakeAMP())
+
+    with pytest.raises(SystemExit, match="1"):
+        eval_module.eval_crew()
+
+    assert consent_screen.asked == [{"default": True}]
+    assert ran == [("true", False)]
+    assert "cli_usage:eval_consent:logged_in" not in usage
+    assert usage[-1] == "cli_usage:eval_stopped:login_unreadable"
+
+
+def test_a_login_stands_in_for_the_question_only_toward_an_amp_trusted_with_it(
+    project, monkeypatch
+):
+    """The same login, toward an AMP this machine is not set up for, is no
+    consent to send a trace there."""
+    install(monkeypatch, FakeAMP())
+    trusted = {"https://amp.test"}
+
+    assert eval_module.logged_in_to_trusted_amp(trusted) is True
+    monkeypatch.setenv("CREWAI_PLUS_URL", "https://evil.example")
+    assert eval_module.logged_in_to_trusted_amp(trusted) is False
+    monkeypatch.setenv("CREWAI_PLUS_URL", "http://amp.test")  # the login over plain HTTP
+    assert eval_module.logged_in_to_trusted_amp({"http://amp.test"}) is False
+    monkeypatch.delenv("CREWAI_PLUS_URL")
+    monkeypatch.setattr(eval_module, "saved_login", lambda: None)
+    assert eval_module.logged_in_to_trusted_amp(trusted) is False
+
+
+def test_logged_in_toward_an_untrusted_amp_the_crew_is_still_not_run(
+    project, monkeypatch, capsys, usage, consent_screen
+):
+    """The untrusted-AMP stop comes before any question a login would skip."""
+    directory, _ = project  # logged in: the fixture's saved login
+    ran = _a_project_that_never_traced(directory, monkeypatch)
+    (directory / ".env").write_text("CREWAI_PLUS_URL=https://evil.example\n")
+    amp = install(monkeypatch, FakeAMP())
+
+    with pytest.raises(SystemExit, match="1"):
+        eval_module.eval_crew()
+
+    assert ran == []
+
+    assert "its trace would go to https://evil.example" in " ".join(capsys.readouterr().out.split())
+    assert usage == ["cli_usage:eval_stopped:untrusted_amp"]
+    assert consent_screen.asked == [] and amp.calls == []
+    assert (directory / ".env").read_text() == "CREWAI_PLUS_URL=https://evil.example\n"
+
+
+@pytest.mark.parametrize("answer", [True, False])
+def test_logged_in_a_project_that_turned_tracing_off_is_still_asked(
+    project, monkeypatch, usage, answer
+):
+    """A login is the consent of a project that never chose. One that set
+    CREWAI_TRACING_ENABLED=false said no, and only its own yes overrules it."""
+    directory, _ = project  # logged in: the fixture's saved login
+    ran = _a_project_that_never_traced(directory, monkeypatch)
+    (directory / ".env").write_text("CREWAI_TRACING_ENABLED=false\n")
+    asked: list[str] = []
+    monkeypatch.setattr(eval_module.click, "confirm", lambda text, **kwargs: asked.append(text) or answer)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    if answer:
+        eval_module.eval_crew()
+    else:
+        with pytest.raises(SystemExit) as exited:
+            eval_module.eval_crew()
+        assert exited.value.code == 0
+
+    assert asked == [eval_module.TRACING_OFF_QUESTION]
+    assert "cli_usage:eval_consent:logged_in" not in usage
+    if answer:
+        assert ran == [("true", False)]
+    else:
+        assert ran == []
+        assert usage == ["cli_usage:eval_stopped:declined"]
+        assert (directory / ".env").read_text() == "CREWAI_TRACING_ENABLED=false\n"
+
+
+# ── a project's .env cannot bring a login of its own ────────────────────────
+
+# As shipped: the fixtures above point both stores at one folder.
+_SHIPPED_LOGIN_STORE = vars(TokenManager)["_get_secure_storage_path"]
+_SHIPPED_ACCOUNT_CREDENTIALS_DIR = eval_module._account_credentials_dir
+# What a cloned project's .env says, to move the login store into the project.
+FOREIGN_HOME_ENV = (
+    "HOME=./.h\nXDG_DATA_HOME=./.h/.local/share\nLOCALAPPDATA=./.h/AppData/Local\n"
+)
+
+
+@pytest.fixture
+def two_logins(tmp_path, tmp_path_factory, monkeypatch):
+    """This account's home, in the account database and in HOME, holding a live
+    `crewai login`; and `.h` in the project, a home it ships, holding someone
+    else's live login. Both stores, and the account's, are found as shipped."""
+    monkeypatch.setattr(TokenManager, "_get_secure_storage_path", _SHIPPED_LOGIN_STORE)
+    monkeypatch.setattr(eval_module, "_account_credentials_dir", _SHIPPED_ACCOUNT_CREDENTIALS_DIR)
+    monkeypatch.setattr(eval_module, "saved_login", _REAL_SAVED_LOGIN)
+    home = tmp_path_factory.mktemp("home")
+    monkeypatch.setattr("pwd.getpwuid", lambda uid: SimpleNamespace(pw_dir=str(home)))
+    # Put back after the test whatever the project's .env sets in os.environ.
+    for name in ("XDG_DATA_HOME", "LOCALAPPDATA"):
+        monkeypatch.delenv(name, raising=False)
+    in_a_day = int(time.time() + 86400)
+    monkeypatch.setenv("HOME", str(tmp_path / ".h"))
+    TokenManager().save_tokens("someone-elses-token", in_a_day)
+    monkeypatch.setenv("HOME", str(home))
+    TokenManager().save_tokens("this-accounts-token", in_a_day)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the account database is POSIX's")
+@pytest.mark.parametrize("run_again", [False, True], ids=["crewai eval", "the run app's Evaluate"])
+def test_a_login_the_projects_env_points_to_is_no_consent(
+    project, monkeypatch, capsys, usage, consent_screen, two_logins, run_again
+):
+    """A cloned project's .env moves HOME (and XDG_DATA_HOME, LOCALAPPDATA) to a
+    folder it ships, holding a valid login to the attacker's organization. The
+    login it reads is not this account's, so the person is still asked; a no
+    runs nothing, sends nothing, and AMP is not asked about that login."""
+    directory, _ = project
+    ran = _a_project_that_never_traced(directory, monkeypatch)
+    (directory / ".env").write_text(FOREIGN_HOME_ENV)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+    consent_screen.answer["yes"] = False
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew(run_again=run_again)
+    out = " ".join(capsys.readouterr().out.split())
+
+    assert exited.value.code == 0
+    assert eval_module.saved_login() == "someone-elses-token"  # what the run would carry
+    assert consent_screen.asked == [{"default": True}]
+    assert eval_module.TRACING_NOW_ON not in out
+    assert ran == [] and amp.calls == [] and amp.login_checks == []
+    assert (directory / ".env").read_text() == FOREIGN_HOME_ENV
+    assert usage == ["cli_usage:eval_stopped:declined"]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the account database is POSIX's")
+def test_this_accounts_own_login_still_stands_in_for_the_question(
+    project, monkeypatch, usage, consent_screen, two_logins
+):
+    directory, _ = project
+    ran = _a_project_that_never_traced(directory, monkeypatch)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert consent_screen.asked == []
+    assert ran == [("true", True)]
+    assert amp.login_checks == [("this-accounts-token", "https://amp.test")]
+    assert amp.calls[0] == ("create", "the-new-run")
+    assert usage[0] == "cli_usage:eval_consent:logged_in"
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the account database is POSIX's")
+def test_with_no_home_in_the_account_database_no_login_is_this_accounts(
+    project, monkeypatch, usage, consent_screen, two_logins
+):
+    """Nothing to tell this account's store from one the environment points to:
+    the person is asked."""
+    directory, _ = project
+    ran = _a_project_that_never_traced(directory, monkeypatch)
+
+    def no_entry(uid):
+        raise KeyError(f"getpwuid(): uid not found: {uid}")
+
+    monkeypatch.setattr("pwd.getpwuid", no_entry)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert consent_screen.asked == [{"default": True}]
+    assert ran == [("true", False)]
+    assert "cli_usage:eval_consent:logged_in" not in usage
 
 
 # ── a project that turned tracing off is asked, never overruled ─────────────

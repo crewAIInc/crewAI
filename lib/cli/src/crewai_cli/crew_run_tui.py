@@ -286,6 +286,7 @@ class TraceConsentScreen(ModalScreen[bool]):
         Binding("escape", "consent_no", "Cancel", show=False),
     ]
     YES_LABEL = "Share Trace"
+    NO_LABEL = "Cancel"
 
     def compose(self) -> ComposeResult:
         with Vertical(id="consent-dialog"):
@@ -296,7 +297,7 @@ class TraceConsentScreen(ModalScreen[bool]):
                     id="btn-consent-yes",
                     classes="consent-btn",
                 )
-                yield Button("Cancel", id="btn-consent-no", classes="consent-btn")
+                yield Button(self.NO_LABEL, id="btn-consent-no", classes="consent-btn")
 
     def _build_content(self) -> Text:
         t = Text()
@@ -350,19 +351,23 @@ class TurnTracingOnScreen(TraceConsentScreen):
 
 
 class EvaluateConsentScreen(TraceConsentScreen):
-    """Evaluate, pressed on a run of a project that never turned tracing on:
-    the run has to happen again, traced, so its trace is shared to be graded.
-    Enter shares (the share button has the focus), since the person asked for
-    the evaluation; Cancel or Esc runs nothing. Nothing times out."""
+    """Evaluate, pressed logged out on a run of a project that never turned
+    tracing on: the run has to happen again, traced, so its trace is sent to
+    be graded. Enter evaluates (that button has the focus), since the person
+    asked for the evaluation; Not now or Esc runs nothing. Nothing times out.
+    Logged in, pressing Evaluate is the consent and this is not shown."""
 
-    YES_LABEL = "Share & Evaluate"
+    YES_LABEL = "Get score"
+    NO_LABEL = "Not now"
 
     def _build_content(self) -> Text:
         t = Text()
-        t.append("  Evaluating this run needs its trace.\n\n", style=f"bold {_C_TEXT}")
-        t.append("  The crew runs again, traced, and its trace\n", style=_C_DIM)
-        t.append("  goes to CrewAI AMP, which grades it.\n\n", style=_C_DIM)
-        t.append("  Enter shares it; Cancel runs nothing.\n", style=_C_MUTED)
+        t.append("  Get a score for this run?\n\n", style=f"bold {_C_TEXT}")
+        t.append("  Your agentic system runs once more and\n", style=_C_DIM)
+        t.append("  CrewAI AMP grades it, then shows you\n", style=_C_DIM)
+        t.append("  what to fix.\n\n", style=_C_DIM)
+        # The upload disclosure: this screen is the consent for a logged-out run.
+        t.append("  CrewAI AMP grades your run\n", style=_C_MUTED)
         return t
 
 
@@ -1518,10 +1523,11 @@ FooterKey .footer-key--key {
         if traced is None:
             # Nothing of this run reached AMP, so there is nothing to grade: the
             # run happens again, traced, and is evaluated — once tracing is on.
-            # A project that turned it off, or never turned it on, is asked
-            # first; a no runs nothing.
+            # A project that turned it off is asked first, and so is one that
+            # never turned it on when nobody is logged in; a no runs nothing.
             from crewai_cli.experimental.eval_crew import (
                 _machine_amp_origins,
+                logged_in_to_trusted_amp,
                 record_stop,
                 tracing_already_on,
                 tracing_turned_off,
@@ -1541,16 +1547,20 @@ FooterKey .footer-key--key {
             # (`crewai eval` refuses it too), so a yes here could not be honored.
             # This process loaded the project's `.env` for the run, so only the
             # AMPs this machine is configured for are trusted.
-            stop = untrusted_amp_stop(_machine_amp_origins())
+            trusted = _machine_amp_origins()
+            stop = untrusted_amp_stop(trusted)
             if stop is not None:
                 record_stop("untrusted_amp")
                 self.notify(stop, title="Evaluate", severity="warning")
                 return
+            # A project that turned tracing off said no: asked, logged in or not.
             if tracing_turned_off():
                 self.push_screen(TurnTracingOnScreen(), self._tracing_on_answered)
                 return
-            if not tracing_already_on():
-                # Never turned on: asked first, saying the evaluation needs it.
+            # Never turned on: logged out, asked first. Logged in, the press is
+            # the consent: `crewai eval` turns tracing on and says so in one line
+            # (or asks, in the terminal, when AMP refuses the login).
+            if not tracing_already_on() and not logged_in_to_trusted_amp(trusted):
                 self.push_screen(EvaluateConsentScreen(), self._tracing_on_answered)
                 return
             self._run_again_traced()

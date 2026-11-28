@@ -1,6 +1,9 @@
 import contextvars
 from datetime import datetime, timezone
 import json
+import os
+from pathlib import Path
+import sys
 import time
 from types import SimpleNamespace
 from typing import Any
@@ -2800,11 +2803,14 @@ def stops(monkeypatch) -> list[str]:
 def test_evaluate_on_an_untraced_run_asks_before_tracing_is_turned_on(
     monkeypatch, tmp_path, stops, answer, tracing, asked_on
 ) -> None:
-    """The project said no to tracing, or nobody ever turned it on: only a yes
-    turns it on (in its .env) and runs the crew again; a no leaves everything
-    as it was. Each case is asked on a screen that says the evaluation needs
-    the trace."""
+    """The project said no to tracing, or nobody ever turned it on and nobody
+    is logged in: only a yes turns it on (in its .env) and runs the crew again;
+    a no leaves everything as it was. Each case is asked on a screen that says
+    the evaluation needs the trace."""
+    from crewai_cli.experimental import eval_crew
+
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(eval_crew, "saved_login", lambda: None)
     if tracing == "turned off":
         (tmp_path / ".env").write_text("CREWAI_TRACING_ENABLED=false\n")
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
@@ -2842,6 +2848,159 @@ def test_evaluate_on_an_untraced_run_asks_before_tracing_is_turned_on(
         assert stops == ["cli_usage:eval_stopped:declined"]
 
 
+def _the_login_store_is_this_accounts(tmp_path: Path, monkeypatch) -> Path:
+    """The `crewai login` store, and the account's own, are one folder of this
+    test's (hidden, and made only by a test that saves a login there): a saved
+    login counts as this account's."""
+    from crewai_cli.experimental import eval_crew
+    from crewai_core.token_manager import TokenManager
+
+    store = tmp_path / ".credentials"
+    monkeypatch.setattr(TokenManager, "_get_secure_storage_path", staticmethod(lambda: store))
+    monkeypatch.setattr(eval_crew, "_account_credentials_dir", lambda: store)
+    return store
+
+
+def _an_untraced_run_in(tmp_path, monkeypatch, env: str = "") -> tuple[CrewRunApp, list[object], list[tuple[object, object]]]:
+    """The app at the end of a run that was not traced, in a project whose
+    `.env` is ENV and whose runs trace to this machine's own AMP; what it
+    pushed and how it exited are recorded."""
+    monkeypatch.chdir(tmp_path)
+    if env:
+        (tmp_path / ".env").write_text(env)
+    _the_login_store_is_this_accounts(tmp_path, monkeypatch)
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    # the run traces to this machine's own AMP (`.env.test` names a fake one)
+    monkeypatch.delenv("CREWAI_PLUS_URL", raising=False)
+    monkeypatch.setattr(
+        "crewai_core.user_data.is_tracing_enabled",
+        lambda: os.environ.get("CREWAI_TRACING_ENABLED") == "true",
+    )
+    app = CrewRunApp()
+    app._status = "completed"
+    app._crew_result = object()
+    app._telemetry = Mock()
+    app._execution_uuid = "run-this-app"
+    app._unsubscribe = lambda: None  # type: ignore[method-assign]
+    exits: list[object] = []
+    app.exit = lambda result=None: exits.append(result)  # type: ignore[method-assign]
+    pushed: list[tuple[object, object]] = []
+    app.push_screen = lambda screen, callback=None: pushed.append((screen, callback))  # type: ignore[method-assign]
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
+    return app, exits, pushed
+
+
+def test_evaluate_logged_in_is_the_consent_and_runs_it_again_without_a_question(
+    monkeypatch, tmp_path, stops
+) -> None:
+    """Logged in to the AMP the run traces to, pressing Evaluate is the yes:
+    nothing is asked, the app closes, and `crewai eval` runs the crew again
+    traced — it is the one that turns tracing on and says so in one line."""
+    from crewai_cli.experimental import eval_crew
+
+    monkeypatch.setattr(eval_crew, "saved_login", lambda: "login-token")
+    app, exits, pushed = _an_untraced_run_in(tmp_path, monkeypatch)
+
+    app.action_evaluate_crew()
+
+    assert pushed == []
+    assert app._want_traced_rerun is True and exits == [app._crew_result]
+    assert stops == []
+    # The app turns nothing on itself: were tracing on already, `crewai eval`
+    # would not say it turned it on, nor tell the next run app to say so.
+    assert not (tmp_path / ".env").exists()
+    assert os.environ.get("CREWAI_TRACING_ENABLED") != "true"
+
+
+@pytest.mark.parametrize("answer", [True, False])
+def test_evaluate_logged_in_still_asks_a_project_that_turned_tracing_off(
+    monkeypatch, tmp_path, stops, answer
+) -> None:
+    """CREWAI_TRACING_ENABLED=false is a no a login does not overrule."""
+    from crewai_cli.experimental import eval_crew
+
+    monkeypatch.setattr(eval_crew, "saved_login", lambda: "login-token")
+    app, exits, pushed = _an_untraced_run_in(
+        tmp_path, monkeypatch, "CREWAI_TRACING_ENABLED=false\n"
+    )
+
+    app.action_evaluate_crew()
+
+    screen, answered = pushed[0]
+    assert type(screen) is crew_run_tui.TurnTracingOnScreen and exits == []
+    answered(answer)
+    assert app._want_traced_rerun is answer
+    assert stops == ([] if answer else ["cli_usage:eval_stopped:declined"])
+
+
+@pytest.mark.parametrize(("expires_in", "asked"), [(-60, True), (3600, False)], ids=["expired", "live"])
+def test_evaluate_with_an_expired_login_asks_as_logged_out(
+    monkeypatch, tmp_path, stops, expires_in, asked
+) -> None:
+    """The real login store: a `crewai login` past its expiry is no login, so
+    the screen asks; Not now runs nothing and counts the no."""
+    from crewai_core.token_manager import TokenManager
+
+    app, exits, pushed = _an_untraced_run_in(tmp_path, monkeypatch)
+    (tmp_path / ".credentials").mkdir()
+    TokenManager().save_tokens("saved-token", int(time.time() + expires_in))
+
+    app.action_evaluate_crew()
+
+    if not asked:
+        assert pushed == [] and exits == [app._crew_result]
+        return
+    screen, answered = pushed[0]
+    assert type(screen) is crew_run_tui.EvaluateConsentScreen and exits == []
+    answered(False)  # Not now
+    assert app._want_traced_rerun is False and exits == []
+    assert not (tmp_path / ".env").exists()
+    assert stops == ["cli_usage:eval_stopped:declined"]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the account database is POSIX's")
+@pytest.mark.parametrize("home_from_the_env", [True, False], ids=["the project's", "this account's"])
+def test_evaluate_asks_when_the_login_is_one_the_projects_env_points_to(
+    monkeypatch, tmp_path, tmp_path_factory, stops, home_from_the_env
+) -> None:
+    """The run loaded the project's `.env` into this process, and a cloned
+    project's `.env` can move HOME (XDG_DATA_HOME, LOCALAPPDATA) to a folder it
+    ships, holding a valid login to someone else's organization: that login is
+    no consent, and the screen asks. This account's own login still is."""
+    from crewai_cli.experimental import eval_crew
+    from crewai_core.token_manager import TokenManager
+
+    shipped_store = vars(TokenManager)["_get_secure_storage_path"]
+    shipped_account_dir = eval_crew._account_credentials_dir
+    app, exits, pushed = _an_untraced_run_in(tmp_path, monkeypatch)
+    monkeypatch.setattr(TokenManager, "_get_secure_storage_path", shipped_store)
+    monkeypatch.setattr(eval_crew, "_account_credentials_dir", shipped_account_dir)
+    home = tmp_path_factory.mktemp("home")
+    monkeypatch.setattr("pwd.getpwuid", lambda uid: SimpleNamespace(pw_dir=str(home)))
+    in_a_day = int(time.time() + 86400)
+    monkeypatch.setenv("HOME", str(tmp_path / ".h"))
+    TokenManager().save_tokens("someone-elses-token", in_a_day)
+    monkeypatch.setenv("HOME", str(home))
+    TokenManager().save_tokens("this-accounts-token", in_a_day)
+    if home_from_the_env:  # as the run's load of the project's `.env` left it
+        monkeypatch.setenv("HOME", "./.h")
+        monkeypatch.setenv("XDG_DATA_HOME", "./.h/.local/share")
+        monkeypatch.setenv("LOCALAPPDATA", "./.h/AppData/Local")
+
+    app.action_evaluate_crew()
+
+    if not home_from_the_env:
+        assert pushed == [] and exits == [app._crew_result]
+        return
+    assert eval_crew.saved_login() == "someone-elses-token"  # what the run would carry
+    screen, answered = pushed[0]
+    assert type(screen) is crew_run_tui.EvaluateConsentScreen and exits == []
+    answered(False)  # Not now
+    assert app._want_traced_rerun is False and exits == []
+    assert not (tmp_path / ".env").exists()
+    assert stops == ["cli_usage:eval_stopped:declined"]
+
+
 class _ScreenHost(App[None]):
     """Shows one consent screen and keeps what it was dismissed with."""
 
@@ -2856,25 +3015,42 @@ class _ScreenHost(App[None]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(("key", "shared"), [("enter", True), ("y", True), ("n", False), ("escape", False)])
-async def test_evaluate_consent_screen_shares_on_enter_and_says_why(key, shared) -> None:
-    """Evaluate on a project that never traced: the screen says the evaluation
-    needs the trace and that Enter shares it; Enter or y shares, n or Esc runs
-    nothing. Nothing on it counts down."""
+async def test_evaluate_consent_screen_evaluates_on_enter_and_says_what_it_does(key, shared) -> None:
+    """Evaluate, logged out, on a project that never traced: the screen says
+    what grading the run takes and gives; Enter or y evaluates, n or Esc (Not
+    now) runs nothing. Nothing on it counts down."""
     screen = crew_run_tui.EvaluateConsentScreen()
     app = _ScreenHost(screen)
     async with app.run_test() as pilot:
         await pilot.pause()
-        text = str(screen.query_one("#consent-text", Static).render())
+        text = " ".join(str(screen.query_one("#consent-text", Static).render()).split())
         label = str(screen.query_one("#btn-consent-yes", Button).label)
+        no_label = str(screen.query_one("#btn-consent-no", Button).label)
         await pilot.press(key)
         await pilot.pause()
 
     assert app.answers == [shared]
-    assert label == "Share & Evaluate"
-    assert "Evaluating this run needs its trace." in text
-    assert "goes to CrewAI AMP, which grades it." in text
-    assert "Enter shares it; Cancel runs nothing." in text
+    assert (label, no_label) == ("Get score", "Not now")
+    assert text.startswith("Get a score for this run?")
+    assert (
+        "Your agentic system runs once more and CrewAI AMP grades it, "
+        "then shows you what to fix." in text
+    )
+    assert text.endswith("CrewAI AMP grades your run")
+    assert "The run's trace is sent to CrewAI AMP." not in text
     assert "seconds" not in text
+
+
+@pytest.mark.asyncio
+async def test_not_now_on_the_evaluate_screen_runs_nothing() -> None:
+    screen = crew_run_tui.EvaluateConsentScreen()
+    app = _ScreenHost(screen)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        await pilot.click("#btn-consent-no")
+        await pilot.pause()
+
+    assert app.answers == [False]
 
 
 @pytest.mark.asyncio
@@ -2887,8 +3063,9 @@ async def test_the_end_of_run_sharing_screen_is_unchanged() -> None:
         await pilot.pause()
         text = str(screen.query_one("#consent-text", Static).render())
         label = str(screen.query_one("#btn-consent-yes", Button).label)
+        no_label = str(screen.query_one("#btn-consent-no", Button).label)
 
-    assert label == "Share Trace"
+    assert (label, no_label) == ("Share Trace", "Cancel")
     assert "Share this execution trace with CrewAI?" in text
     assert "Cancel or wait 20 seconds" in text
 
