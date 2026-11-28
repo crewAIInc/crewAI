@@ -10819,6 +10819,151 @@
       }
     },
     {
+      "description": "Search Edgepedia, a free cited encyclopedia with more than 519,000 articles across 31 languages, and retrieve full Markdown articles with citations and credit lines. Pass a subject name or title words.",
+      "env_vars": [],
+      "humanized_name": "Edgepedia Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Search Edgepedia and retrieve cited Markdown encyclopedia articles.\n\nConnects directly to Edgepedia's keyless public REST API\n(https://www.edgepedia.org/api/v1), covering more than 519,000 cited articles\nwith stored translations across 31 languages.",
+        "properties": {
+          "base_url": {
+            "default": "https://www.edgepedia.org/api/v1",
+            "description": "Base URL for the Edgepedia v1 REST API.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "default_citations": {
+            "default": true,
+            "description": "Default inline citation setting when citations is not provided per call.",
+            "title": "Default Citations",
+            "type": "boolean"
+          },
+          "default_lang": {
+            "default": "en",
+            "description": "Default language code used when lang is not provided per call.",
+            "title": "Default Lang",
+            "type": "string"
+          },
+          "max_chars_per_article": {
+            "default": 4000,
+            "description": "Maximum character length per returned article (0 disables truncation).",
+            "minimum": 0,
+            "title": "Max Chars Per Article",
+            "type": "integer"
+          },
+          "timeout": {
+            "default": 15.0,
+            "description": "HTTP request timeout in seconds.",
+            "exclusiveMinimum": 0,
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
+        "required": [],
+        "title": "EdgepediaTool",
+        "type": "object"
+      },
+      "name": "EdgepediaTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for EdgepediaTool.",
+        "properties": {
+          "citations": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Include inline source URLs when True, or shorter '[n]' citation markers when False. Defaults to the tool's configured setting.",
+            "title": "Citations"
+          },
+          "lang": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional language code for stored translations across 31 languages (for example, 'en' for English, 'zh' for Chinese, 'es' for Spanish, 'ar' for Arabic, or 'hi' for Hindi). Falls back to English when unavailable.",
+            "title": "Lang"
+          },
+          "limit": {
+            "default": 1,
+            "description": "Number of matching articles to retrieve (1 to 5).",
+            "maximum": 5,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "query": {
+            "description": "Subject name or title words to search in Edgepedia (for example, 'Mount Fuji' or 'photosynthesis'), rather than a full question.",
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "EdgepediaToolInput",
+        "type": "object"
+      }
+    },
+    {
       "description": "Search the web with Exa, the fastest and most accurate web search API.",
       "env_vars": [
         {
